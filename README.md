@@ -24,3 +24,49 @@ npm run dev
 - Frontend: http://localhost:5173
 - Логин: admin
 - Пароль: admin123
+# 🔥 Система управления отоплением
+
+Умная система управления гибридным отоплением частного дома на базе ESP32.
+
+## 📸 Скриншоты
+
+![Главная панель](docs/screenshots/dashboard.png)
+![Настройки](docs/screenshots/settings.png)
+
+## ✨ Возможности
+
+- 🌡️ Мониторинг температуры в реальном времени
+- 🔥 Управление твердотопливным и электрокотлом
+- 💧 Контроль теплых полов и радиаторов
+- 📊 Графики и история изменений
+- 📱 Мобильная версия интерфейса
+- 🤖 Уведомления через Telegram-бот
+
+## 🛠 Технологии
+
+| Компонент | Технология |
+|-----------|-----------|
+| Frontend | React, CSS |
+| Backend | Node.js, Express |
+| Database | PostgreSQL, Prisma |
+| Real-time | WebSocket |
+| Hardware | ESP32 |
+| Deployment | Docker |
+
+## 🚀 Быстрый старт
+
+### Требования
+- Docker и Docker Compose
+- Git
+
+### Установка
+
+```bash
+# Клонировать репозиторий
+git clone https://github.com/ETar74/heating-system.git
+
+# Перейти в папку проекта
+cd heating-system
+
+# Запустить все сервисы
+docker-compose up -d --build
