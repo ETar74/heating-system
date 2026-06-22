@@ -1,0 +1,229 @@
+.settings-page {
+  padding: 0;
+  max-width: 1200px;
+  margin: 0;
+}
+
+.settings-header {
+  display: flex;     
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.settings-header h1 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.5rem;
+}
+
+.message {
+  padding: 0.75rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-weight: 600;
+  animation: slideIn 0.3s;
+}
+
+.message.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.message.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.message.info {
+  background: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== СЕТКА ИЗ 2 КОЛОНОК (вместо одной) ===== */
+.settings-groups {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.settings-group {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* Уменьшенные заголовки групп (в 1.5 раза) */
+.group-header {
+  padding: 0.65rem 1rem; /* Уменьшили вертикальный padding в 1.5 раза */
+  color: white;
+}
+
+.settings-group:nth-child(1) .group-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.settings-group:nth-child(2) .group-header {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.settings-group:nth-child(3) .group-header {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.settings-group:nth-child(4) .group-header {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.settings-group:nth-child(5) .group-header {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+.group-header h2 {
+  margin: 0 0 0.15rem 0; /* Уменьшили отступ снизу */
+  font-size: 1rem; /* Шрифт не меняем */
+}
+
+.group-description {
+  margin: 0;
+  opacity: 0.9;
+  font-size: 0.75rem;
+}
+
+/* ===== УМЕНЬШЕННАЯ ТАБЛИЦА (в 1.5 раза) ===== */
+.settings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 1rem;
+}
+
+.settings-table thead {
+  background: #f8f9fa;
+}
+
+.settings-table th {
+  padding: 0.4rem 0.75rem; /* Уменьшили вертикальный padding в 1.5 раза */
+  text-align: left;
+  font-weight: 600;
+  color: #495057;
+  border-bottom: 2px solid #dee2e6;
+  font-size: 0.9rem; /* Шрифт не меняем */
+}
+
+.settings-table td {
+  padding: 0.4rem 0.75rem; /* Уменьшили вертикальный padding в 1.5 раза */
+  border-bottom: 1px solid #e9ecef;
+}
+
+.settings-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.settings-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.param-label {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.param-name {
+  font-size: 1rem;
+}
+
+.param-value {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.param-display {
+  font-size: 1.1rem;
+  color: #34495e;
+}
+
+.param-edit-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem; /* Уменьшили отступ */
+}
+
+.param-input {
+  padding: 0.5rem;
+  border: 2px solid #3498db;
+  border-radius: 6px;
+  font-size: 1rem;
+  width: 120px;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.param-input:focus {
+  border-color: #2980b9;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.param-unit-inline {
+  color: #7f8c8d;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.param-actions {
+  text-align: center;
+  width: 80px;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 0.25rem; /* Уменьшили отступ */
+}
+
+.btn-icon {
+  padding: 0.35rem 0.75rem; /* Уменьшили вертикальный padding */
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem; /* Шрифт не меняем */
+  transition: all 0.2s;
+  background: transparent;
+}
+
+.btn-icon:hover {
+  transform: scale(1.1);
+}
+
+.btn-edit:hover { background: #e8f4f8; }
+.btn-save:hover { background: #d4edda; }
+.btn-cancel:hover { background: #fde8e8; }
+
+/* ===== АДАПТИВНОСТЬ ===== */
+@media (max-width: 992px) {
+  /* На планшетах и меньше - одна колонка */
+  .settings-groups {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .settings-page { padding: 1rem; }
+
+  .settings-table { font-size: 0.8rem; }
+
+  .settings-table th,
+  .settings-table td { padding: 0.35rem 0.35rem; /* Уменьшили вертикальный padding */ }
+
+  .param-input { width: 80px; }
+}

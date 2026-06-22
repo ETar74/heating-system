@@ -1,0 +1,228 @@
+.dashboard {
+  max-width: 1200px;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.dashboard-header h1 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.ws-status {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.ws-status.connected {
+  background: #d4edda;
+  color: #155724;
+}
+
+.ws-status.disconnected {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+/* ===== БАЗОВЫЙ КЛАСС КАРТОЧКИ ===== */
+.card {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s, box-shadow 0.3s;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.card-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.card-title {
+  color: #7f8c8d;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.card-value {
+  color: #2c3e50;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.card-value.small {
+  font-size: 0.9rem;
+}
+
+/* ===== МОДИФИКАТОРЫ РАЗМЕРОВ ===== */
+
+/* Очень маленькая карточка (Улица) */
+.card.size-xs {
+  padding: 0.5rem;
+  min-height: 60px;
+}
+.card.size-xs .card-icon { font-size: 1rem; }
+.card.size-xs .card-title { font-size: 0.7rem; }
+.card.size-xs .card-value { font-size: 0.9rem; }
+
+/* Маленькая карточка (Устройство) */
+.card.size-sm {
+  padding: 0.75rem;
+  min-height: 80px;
+}
+.card.size-sm .card-icon { font-size: 1.25rem; }
+.card.size-sm .card-title { font-size: 0.75rem; }
+.card.size-sm .card-value { font-size: 1.1rem; }
+
+/* Большая карточка (Инструменты) */
+.card.size-lg {
+  padding: 1.5rem;
+  min-height: 130px;
+}
+.card.size-lg .card-icon { font-size: 2rem; }
+.card.size-lg .card-title { font-size: 1rem; }
+.card.size-lg .card-value { font-size: 1.5rem; }
+
+/* ===== КЛИКАБЕЛЬНЫЕ КАРТОЧКИ ===== */
+.card.clickable {
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card.clickable:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 16px rgba(52, 152, 219, 0.2);
+  border-left-color: #2980b9;
+}
+
+.card.clickable:active {
+  transform: translateY(-2px);
+}
+
+.compare-btn:hover {
+  background: #8e44ad;
+}
+
+/* ===== ЗАГРУЗКА ===== */
+.loading {
+  text-align: center;
+  padding: 2rem;
+  color: #7f8c8d;
+}
+
+/* ===== СЕТКА ВИДЖЕТОВ 2×2 (НЕ ТРОГАЕМ) ===== */
+.widgets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.widgets-grid > div {
+  height: 100%;
+}
+
+.widgets-grid-2x2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.widgets-grid-2x2 > div {
+  height: 100%;
+}
+
+/* ===== КАРТОЧКА УЛИЦЫ ===== */
+.outdoor-card {
+  background: white;
+  padding: 1rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  border-left: 4px solid #3498db;
+}
+
+.outdoor-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 0.25rem;
+}
+
+.outdoor-label {
+  font-size: 0.875rem;
+  color: #7f8c8d;
+}
+
+/* ===== АДАПТИВНОСТЬ ===== */
+@media (max-width: 768px) {
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .header-buttons {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .section-title {
+    font-size: 1.1rem;
+  }
+
+  .cards-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .card {
+    padding: 1rem;
+  }
+
+  .card-icon {
+    font-size: 1.5rem;
+  }
+
+  .card-title {
+    font-size: 0.75rem;
+  }
+
+  .card-value {
+    font-size: 1.25rem;
+  }
+
+  .card-value.small {
+    font-size: 0.9rem;
+  }
+
+  .widgets-grid-2x2 {
+    grid-template-columns: 1fr;
+  }
+
+  .outdoor-value {
+    font-size: 1.25rem;
+  }
+}

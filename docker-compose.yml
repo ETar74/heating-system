@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # База данных PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: heating_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: heating_system
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - heating_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend (Node.js + Express)
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: heating_backend
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/heating_system?schema=public
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      TELEGRAM_BOT_TOKEN: 
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - /app/node_modules
+    networks:
+      - heating_network
+    command: >
+      sh -c "npx prisma db push && npm run dev"
+
+  # Frontend (React + Vite)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: heating_frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - heating_network
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+
+networks:
+  heating_network:
+    driver: bridge

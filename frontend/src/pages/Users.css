@@ -1,0 +1,251 @@
+.users-page {
+  max-width: 1200px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.page-header h1 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.page-header button {
+  padding: 0.75rem 1.5rem;
+  background: #27ae60;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.3s;
+}
+
+.page-header button:hover {
+  background: #229954;
+}
+
+.user-form {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.user-form h3 {
+  margin: 0 0 1rem 0;
+  color: #2c3e50;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.form-row input,
+.form-row select {
+  flex: 1;
+  min-width: 150px;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 1rem;
+}
+
+.form-row button {
+  padding: 0.75rem 1.5rem;
+  background: #3498db;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.form-row button:hover {
+  background: #2980b9;
+}
+
+/* ===== ДЕСКТОПНАЯ ТАБЛИЦА ===== */
+.desktop-table {
+  display: block; /* Показываем на ПК */
+}
+
+.users-table-container {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.users-table thead {
+  background: #2c3e50;
+  color: white;
+}
+
+.users-table th {
+  padding: 0.65rem 1rem; /* Уменьшили вертикальный padding в 1.5 раза */
+  text-align: left;
+  font-weight: 600;
+}
+
+.users-table td {
+  padding: 0.65rem 1rem; /* Уменьшили вертикальный padding в 1.5 раза */
+  border-bottom: 1px solid #ecf0f1;
+}
+
+.users-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 15px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.role-admin {
+  background: #f5c6cb;
+  color: #721c24;
+}
+
+.role-operator {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.role-viewer {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.delete-btn {
+  padding: 0.5rem 1rem;
+  background: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background 0.3s;
+}
+
+.delete-btn:hover {
+  background: #c0392b;
+}
+
+.loading {
+  text-align: center;
+  padding: 2rem;
+  color: #7f8c8d;
+}
+
+/* ===== МОБИЛЬНЫЕ КАРТОЧКИ ===== */
+.mobile-cards {
+  display: none; /* Скрываем на ПК */
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.user-card {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 0.8rem; /* Было 1rem (уменьшено в 1.2 раза) */
+}
+
+.user-card-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+.user-login {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #2c3e50;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Новый стиль для ID в шапке */
+.user-id-inline {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #7f8c8d;
+  margin-left: auto; /* Прижимает ID к правому краю */
+}
+
+.user-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem; /* Было 0.5rem (уменьшено в 1.2 раза) */
+  margin-bottom: 0.8rem; /* Было 1rem */
+}
+
+.user-info-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
+
+.info-label {
+  color: #7f8c8d;
+  font-weight: 500;
+}
+
+.info-value {
+  color: #2c3e50;
+  font-weight: 600;
+  text-align: right;
+}
+
+.user-card-footer {
+  text-align: right;
+  border-top: 1px solid #ecf0f1;
+  padding-top: 0.6rem; /* Было 0.75rem */
+}
+
+/* ===== АДАПТИВНОСТЬ ===== */
+@media (max-width: 768px) {
+  /* Переключаем видимость макетов */
+  .desktop-table {
+    display: none;
+  }
+  .mobile-cards {
+    display: flex;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .form-row {
+    flex-direction: column;
+  }
+
+  .form-row input,
+  .form-row select {
+    width: 100%;
+  }
+}

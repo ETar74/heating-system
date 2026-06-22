@@ -1,0 +1,164 @@
+.parameter-detail {
+  max-width: 1200px;
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.back-btn {
+  padding: 0.5rem 1rem;
+  background: #95a5a6;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.3s;
+}
+
+.back-btn:hover {
+  background: #7f8c8d;
+}
+
+.detail-header h1 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+/* Карточка текущего значения */
+.current-value-card {
+  background: white;
+  padding: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.current-label {
+  color: #7f8c8d;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.5rem;
+}
+
+.current-number {
+  font-size: 3rem;
+  font-weight: 700;
+}
+
+/* Переключатель периода */
+.period-selector {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.period-selector button {
+  padding: 0.5rem 1.25rem;
+  background: white;
+  color: #2c3e50;
+  border: 2px solid #ddd;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+}
+
+.period-selector button:hover {
+  border-color: #3498db;
+}
+
+.period-selector button.active {
+  background: #3498db;
+  color: white;
+  border-color: #3498db;
+}
+
+/* Контейнер графика */
+.chart-container {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-height: 400px;
+}
+
+.loading,
+.no-data {
+  text-align: center;
+  padding: 3rem;
+  color: #7f8c8d;
+  font-size: 1.1rem;
+}
+
+/* Список для текстовых параметров */
+.text-history {
+  padding: 1rem;
+}
+
+.text-history h3 {
+  color: #2c3e50;
+  margin-bottom: 1rem;
+}
+
+.text-history ul {
+  list-style: none;
+  padding: 0;
+}
+
+.text-history li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+.text-history li:hover {
+  background: #f8f9fa;
+}
+
+.text-history .time {
+  color: #7f8c8d;
+  font-family: monospace;
+}
+
+.text-history .value {
+  color: #2c3e50;
+  font-weight: 600;
+}
+/* Адаптивность для мобильных */
+@media (max-width: 768px) {
+  .detail-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .current-value-card {
+    padding: 1.5rem;
+  }
+
+  .current-number {
+    font-size: 2.5rem;
+  }
+
+  .period-selector {
+    justify-content: center;
+  }
+
+  .period-selector button {
+    padding: 0.4rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  .chart-container {
+    padding: 1rem;
+  }
+}

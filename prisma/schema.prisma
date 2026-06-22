@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  passwordHash String   @map("password_hash")
+  telegramId   BigInt?  @unique @map("telegram_id")
+  roleId       Int      @map("role_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  role         Role     @relation(fields: [roleId], references: [id])
+
+  @@map("users")
+}
+
+model Role {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  description String?
+  users       User[]
+
+  @@map("roles")
+}
+
+model Device {
+  id              Int         @id @default(autoincrement())
+  name            String
+  serialNumber    String?     @unique @map("serial_number")
+  firmwareVersion String?     @map("firmware_version")
+  online          Boolean     @default(false)
+  lastSeen        DateTime?   @map("last_seen")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  commands        Command[]
+  events          Event[]
+  telemetry       Telemetry[]
+
+  @@map("devices")
+}
+
+model Parameter {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("parameters")
+}
+
+model Telemetry {
+  id        Int      @id @default(autoincrement())
+  deviceId  Int      @map("device_id")
+  parameter String
+  value     String
+  timestamp DateTime @default(now())
+  device    Device   @relation(fields: [deviceId], references: [id])
+
+  @@index([deviceId, timestamp])
+  @@map("telemetry")
+}
+
+model Event {
+  id        Int      @id @default(autoincrement())
+  deviceId  Int?     @map("device_id")
+  eventType String   @map("event_type")
+  message   String
+  createdAt DateTime @default(now()) @map("created_at")
+  device    Device?  @relation(fields: [deviceId], references: [id])
+
+  @@index([createdAt])
+  @@map("events")
+}
+
+model Command {
+  id         Int       @id @default(autoincrement())
+  deviceId   Int       @map("device_id")
+  command    String
+  payload    Json?
+  status     String    @default("pending")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  executedAt DateTime? @map("executed_at")
+  device     Device    @relation(fields: [deviceId], references: [id])
+
+  @@index([deviceId, status])
+  @@map("commands")
+}

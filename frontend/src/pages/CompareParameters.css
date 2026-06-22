@@ -1,0 +1,141 @@
+.compare-parameters {
+  max-width: 1200px;
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.back-btn {
+  padding: 0.5rem 1rem;
+  background: #95a5a6;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.3s;
+}
+
+.back-btn:hover {
+  background: #7f8c8d;
+}
+
+.detail-header h1 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+/* Выбор параметров */
+.param-selector {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1.5rem;
+}
+
+.param-selector h3 {
+  margin: 0 0 1rem 0;
+  color: #2c3e50;
+  font-size: 1rem;
+}
+
+.checkbox-group {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: #2c3e50;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* Переключатель периода */
+.period-selector {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.period-selector button {
+  padding: 0.5rem 1.25rem;
+  background: white;
+  color: #2c3e50;
+  border: 2px solid #ddd;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+}
+
+.period-selector button:hover {
+  border-color: #3498db;
+}
+
+.period-selector button.active {
+  background: #3498db;
+  color: white;
+  border-color: #3498db;
+}
+
+/* Контейнер графика */
+.chart-container {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-height: 500px;
+}
+
+.loading,
+.no-data {
+  text-align: center;
+  padding: 3rem;
+  color: #7f8c8d;
+  font-size: 1.1rem;
+}
+/* Адаптивность для мобильных */
+@media (max-width: 768px) {
+  .param-selector {
+    padding: 1rem;
+  }
+
+  .checkbox-group {
+    gap: 1rem;
+  }
+
+  .checkbox-label {
+    font-size: 0.9rem;
+  }
+
+  .period-selector {
+    justify-content: center;
+  }
+
+  .chart-container {
+    padding: 1rem;
+  }
+}

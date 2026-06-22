@@ -1,0 +1,258 @@
+.temp-widget {
+  background: white;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  border-left: 4px solid #3498db;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+}
+
+.temp-widget:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.widget-loading {
+  text-align: center;
+  padding: 0.5rem;
+  color: #7f8c8d;
+}
+
+/* Заголовок */
+.widget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.widget-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.widget-title-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.widget-subtitle {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: #7f8c8d;
+}
+
+.widget-icon {
+  font-size: 1.1rem;
+}
+
+/* Уменьшенный шрифт температуры */
+.widget-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  transition: color 0.3s;
+  white-space: nowrap;
+}
+
+/* Трек */
+.widget-track-wrapper {
+  position: relative;
+  padding: 0.35rem 0 0 0;
+}
+
+.widget-track {
+  position: relative;
+  height: 9px;
+  background: #ecf0f1;
+  border-radius: 5px;
+  margin: 0 4px;
+}
+
+.widget-hysteresis-zone {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #27ae60 0%, #2ecc71 50%, #27ae60 100%);
+  border-radius: 5px;
+  opacity: 0.4;
+  transition: all 0.5s;
+}
+
+/* Метки порогов */
+.widget-threshold {
+  position: absolute;
+  top: -4px;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.widget-threshold-line {
+  width: 2px;
+  height: 16px;
+  border-radius: 1px;
+}
+
+.widget-threshold-on .widget-threshold-line {
+  background: #3498db;
+}
+
+.widget-threshold-off .widget-threshold-line {
+  background: #e74c3c;
+}
+
+.widget-threshold-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+.widget-threshold-on .widget-threshold-label {
+  color: #3498db;
+}
+
+.widget-threshold-off .widget-threshold-label {
+  color: #e74c3c;
+}
+
+/* Цель */
+.widget-target {
+  position: absolute;
+  top: -4px; /* Опустили на 2px ниже */
+  transform: translateX(-50%);
+  z-index: 3;
+}
+
+.widget-target-line {
+  width: 2px;
+  height: 20px;
+  background: repeating-linear-gradient(
+    to bottom,
+    #9b59b6 0px,
+    #9b59b6 3px,
+    transparent 3px,
+    transparent 6px
+  );
+}
+
+/* Текущее значение */
+.widget-current {
+  position: absolute;
+  top: -10px; /* Подняли на 2px выше */
+  transform: translateX(-50%);
+  z-index: 4;
+  transition: left 0.5s ease, background-color 0.3s;
+}
+
+/* Чёрная вертикальная линия посередине */
+.widget-current-dot {
+  width: 8px; /* Сделали на 2px шире */
+  height: 16px;
+  border-radius: 2px;
+  background: inherit;
+  border: 1px solid white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  position: relative;
+  transition: none;
+}
+
+/* Чёрная вертикальная линия посередине */
+.widget-current-dot::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1px; /* Сделали в 1px */
+  height: 12px;
+  background: #000;
+  border-radius: 1px;
+}
+
+/* Убираем hover-эффект, так как индикатор теперь маленький */
+.temp-widget:hover .widget-current-dot {
+  transform: none;
+}
+
+/* Мини-шкала */
+.widget-scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 3px;
+  padding: 0 4px;
+  font-size: 0.65rem;
+  color: #95a5a6;
+  font-weight: 500;
+}
+
+/* Информация о порогах */
+.widget-info {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 0.35rem;
+  border-top: 1px solid #ecf0f1;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.widget-info-item {
+  display: flex;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.widget-info-label {
+  color: #95a5a6;
+  font-weight: 500;
+}
+
+.widget-info-value {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .widget-value {
+    font-size: 1.2rem;
+  }
+
+  .widget-current {
+    top: -9px; /* Подняли на 2px выше */
+  }
+
+  .widget-target {
+    top: -4px; /* Опустили на 2px ниже */
+  }
+
+  .widget-current-dot {
+    width: 6px; /* Сделали на 2px шире */
+    height: 14px;
+  }
+
+  .widget-current-dot::after {
+    top: 1px;
+    width: 1px; /* Полоска в 1px */
+    height: 10px;
+  }
+
+  .widget-threshold-line {
+    height: 13px;
+  }
+
+  .widget-target-line {
+    height: 17px;
+  }
+}
