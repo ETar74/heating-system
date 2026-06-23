@@ -8,4 +8,5 @@ router.post('/', requireRole('ADMIN'), usersController.create);
 router.put('/:id', requireRole('ADMIN'), usersController.update);
 router.delete('/:id', requireRole('ADMIN'), usersController.delete);
 
+
 module.exports = router;
