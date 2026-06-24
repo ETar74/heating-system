@@ -15,6 +15,15 @@
   border-right: 1px solid #e0ddd5;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
   flex-shrink: 0;
+
+  /* ===== ФИКСИРОВАННОЕ МЕНЮ ===== */
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  height: 100vh;
+  z-index: 50;
+  overflow-y: auto;
 }
 
 .sidebar-header {
@@ -47,7 +56,7 @@
   list-style: none;
   padding: 0;
   margin: 0;
-  flex: 1;
+  flex: 1; /* Занимает всё свободное место */
 }
 
 .nav-links li {
@@ -76,6 +85,7 @@
   font-weight: 600;
 }
 
+/* ===== КНОПКА "ВЫЙТИ" ВНИЗУ ===== */
 .logout-btn {
   margin: 1rem;
   padding: 0.75rem;
@@ -87,6 +97,7 @@
   font-size: 1rem;
   font-weight: 500;
   transition: background 0.3s;
+  /* Прижата к низу благодаря flex: 1 на nav-links */
 }
 
 .logout-btn:hover {
@@ -117,10 +128,12 @@
   color: #333333;
 }
 
-/* Основной контент — УБРАН ЛИШНИЙ margin-left */
+/* Основной контент — сдвинут вправо, скроллится */
 .main-wrapper {
   flex: 1;
   min-width: 0;
+  /* ===== СДВИГ ВПРАВО (на ширину меню) ===== */
+  margin-left: 250px;
 }
 
 /* Минимальный отступ контента от меню (~0.7 см) */

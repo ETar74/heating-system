@@ -1,7 +1,6 @@
 // roleMiddleware.js
 const requireRole = (...allowedRoles) => {
   return (req, res, next) => {
-    // Предполагаем, что предыдущий middleware (auth) уже добавил user в req
     if (!req.user || !req.user.role) {
       return res.status(401).json({ error: 'Пользователь не авторизован' });
     }

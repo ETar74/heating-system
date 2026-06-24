@@ -19,9 +19,21 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+    if (error.response) {
+      // 401 - токен истёк или невалиден → выбрасываем на логин
+      if (error.response.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+        return Promise.reject(error);
+      }
+      
+      // 403 - нет прав → НЕ выбрасываем на логин, просто показываем ошибку
+      if (error.response.status === 403) {
+        const message = error.response.data?.error || 'Доступ запрещен. Недостаточно прав.';
+        alert(`❌ ${message}`);
+        return Promise.reject(error);
+      }
     }
     return Promise.reject(error);
   }

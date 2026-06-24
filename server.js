@@ -55,16 +55,16 @@ const authenticateToken = (req, res, next) => {
 };
 
 const requireRole = (...roles) => {
-  return async (req, res, next) => {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      include: { role: true }
-    });
+  return (req, res, next) => {
+    // Роль уже есть в req.user из JWT-токена
+    if (!req.user || !req.user.role) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
 
-    if (!user || !roles.includes(user.role.name)) {
+    if (!roles.includes(req.user.role)) {
       return res.status(403).json({ error: 'Insufficient permissions' });
     }
-    req.userRole = user.role.name;
+    
     next();
   };
 };
@@ -297,7 +297,7 @@ app.get('/api/settings', authenticateToken, async (req, res) => {
   }
 });
 
-app.put('/api/settings/:key', authenticateToken, async (req, res) => {
+app.put('/api/settings/:key', authenticateToken, requireRole('ADMIN', 'OPERATOR'), async (req, res) => {
   try {
     const { key } = req.params;
     const { value } = req.body;
@@ -307,6 +307,14 @@ app.put('/api/settings/:key', authenticateToken, async (req, res) => {
       data: { value, updatedAt: new Date() }
     });
 
+    await prisma.event.create({
+      data: {
+        eventType: 'INFO',
+        message: `Setting ${key} updated to ${value} by ${req.user.username}`
+      }
+    });
+
+    broadcast({ type: 'settings_updated' });
     res.json(updated);
   } catch (error) {
     console.error('Error updating setting:', error);

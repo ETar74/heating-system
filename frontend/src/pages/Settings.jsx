@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
 import './Settings.css';
+import { canEditSettings } from '../utils/permissions';
 
 function Settings() {
   const [settings, setSettings] = useState([]);
@@ -8,6 +9,9 @@ function Settings() {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [editMode, setEditMode] = useState({});
   const [originalValues, setOriginalValues] = useState({});
+  
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const canEdit = canEditSettings(user.role);
 
   useEffect(() => {
     loadSettings();
@@ -157,11 +161,14 @@ function Settings() {
 
                   return (
                     <tr key={param.key}>
+                      {/* Колонка 1: Параметр */}
                       <td className="param-label">
                         <div className="param-name">{param.label}</div>
                       </td>
+                      
+                      {/* Колонка 2: Значение */}
                       <td className="param-value">
-                        {isEditing ? (
+                        {isEditing && canEdit ? (
                           <div className="param-edit-wrapper">
                             <input
                               type={param.type === 'time' ? 'time' : 'number'}
@@ -178,32 +185,40 @@ function Settings() {
                           </span>
                         )}
                       </td>
+                      
+                      {/* Колонка 3: Действия */}
                       <td className="param-actions">
-                        {isEditing ? (
-                          <div className="action-buttons">
+                        {canEdit ? (
+                          isEditing ? (
+                            <div className="action-buttons">
+                              <button 
+                                className="btn-icon btn-save"
+                                onClick={() => saveParam(param.key, value)}
+                                title="Сохранить"
+                              >
+                                💾
+                              </button>
+                              <button 
+                                className="btn-icon btn-cancel"
+                                onClick={() => cancelEdit(param.key)}
+                                title="Отменить"
+                              >
+                                ❌
+                              </button>
+                            </div>
+                          ) : (
                             <button 
-                              className="btn-icon btn-save"
-                              onClick={() => saveParam(param.key, value)}
-                              title="Сохранить"
+                              className="btn-icon btn-edit"
+                              onClick={() => startEdit(param.key)}
+                              title="Редактировать"
                             >
-                              💾
+                              ✏️
                             </button>
-                            <button 
-                              className="btn-icon btn-cancel"
-                              onClick={() => cancelEdit(param.key)}
-                              title="Отменить"
-                            >
-                              ❌
-                            </button>
-                          </div>
+                          )
                         ) : (
-                          <button 
-                            className="btn-icon btn-edit"
-                            onClick={() => startEdit(param.key)}
-                            title="Редактировать"
-                          >
-                            ✏️
-                          </button>
+                          <span style={{ color: '#95a5a6', fontSize: '0.8rem' }}>
+                            Только просмотр
+                          </span>
                         )}
                       </td>
                     </tr>

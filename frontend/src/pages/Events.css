@@ -47,13 +47,13 @@
 }
 
 .events-table th {
-  padding: 0.65rem 1rem; /* Уменьшили вертикальный padding в 1.5 раза */
+  padding: 0.37rem 1rem; /* Было 0.55rem, уменьшено в 1.5 раза */
   text-align: left;
   font-weight: 600;
 }
 
 .events-table td {
-  padding: 0.65rem 1rem; /* Уменьшили вертикальный padding в 1.5 раза */
+  padding: 0.3rem 1rem; /* Было 0.5rem, уменьшено в 1.5 раза */
   border-bottom: 1px solid #ecf0f1;
 }
 

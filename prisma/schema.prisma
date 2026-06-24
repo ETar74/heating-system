@@ -91,3 +91,31 @@ model Command {
   @@index([deviceId, status])
   @@map("commands")
 }
+
+// Кэш последних данных от ESP32 (источник истины для UI)
+model DeviceCache {
+  id           Int      @id @default(autoincrement())
+  deviceId     String   @unique @map("device_id")
+  settings     Json?
+  telemetry    Json?
+  deviceStatus Json?    @map("device_status")
+  lastSync     DateTime @default(now()) @map("last_sync")
+  uptime       Int?
+  firmware     String?
+  
+  @@map("device_cache")
+}
+
+// События, пришедшие с ESP32 (история)
+model DeviceEvent {
+  id        Int      @id @default(autoincrement())
+  deviceId  String   @map("device_id")
+  eventId   Int      @map("event_id")
+  timestamp DateTime
+  type      String
+  message   String
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  @@index([deviceId, eventId], name: "device_event_unique")
+  @@map("device_events")
+}

@@ -28,8 +28,10 @@ function App() {
     try {
       const response = await auth.me();
       setUser(response.data);
+      localStorage.setItem('user', JSON.stringify(response.data)); // ← ДОБАВИТЬ
     } catch (error) {
       localStorage.removeItem('token');
+      localStorage.removeItem('user'); // ← ДОБАВИТЬ
     } finally {
       setLoading(false);
     }
@@ -37,6 +39,7 @@ function App() {
 
   const handleLogin = (userData, token) => {
     localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userData)); // ← ДОБАВИТЬ
     setUser(userData);
   };
 
@@ -47,6 +50,7 @@ function App() {
       console.error('Logout error:', error);
     } finally {
       localStorage.removeItem('token');
+      localStorage.removeItem('user'); // ← ДОБАВИТЬ
       setUser(null);
     }
   };

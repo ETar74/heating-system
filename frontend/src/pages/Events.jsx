@@ -50,14 +50,16 @@ function Events() {
         <table className="events-table">
           <thead>
             <tr>
+              <th className="col-number">№</th>
               <th>Дата</th>
               <th>Тип</th>
               <th>Сообщение</th>
             </tr>
           </thead>
           <tbody>
-            {eventList.map(event => (
+            {eventList.map((event, index) => (
               <tr key={event.id} className={getEventClass(event.eventType)}>
+                <td className="col-number">{index + 1}</td>
                 <td>{new Date(event.createdAt).toLocaleString('ru-RU')}</td>
                 <td>
                   <span className="event-badge">

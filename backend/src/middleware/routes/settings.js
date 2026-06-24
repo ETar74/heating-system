@@ -1,12 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { requireRole } = require('../middleware/roleMiddleware');
-// ... ваши импорты контроллеров ...
+const settingsController = require('../controllers/settingsController');
+const { requireRole } = require('../middleware/roleMiddleware');  // ← ДОБАВИТЬ
 
-// Просмотр настроек (доступно всем авторизованным, если есть authMiddleware)
 router.get('/', settingsController.getSettings);
-
-// Изменение настроек (ТОЛЬКО ADMIN и OPERATOR)
-router.put('/:key', requireRole('ADMIN', 'OPERATOR'), settingsController.updateSetting);
+router.put('/:key', requireRole('ADMIN', 'OPERATOR'), settingsController.updateSetting);  // ← ЗАЩИТА
 
 module.exports = router;
