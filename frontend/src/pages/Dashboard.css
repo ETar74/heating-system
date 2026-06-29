@@ -79,7 +79,6 @@
 
 /* ===== МОДИФИКАТОРЫ РАЗМЕРОВ ===== */
 
-/* Очень маленькая карточка (Улица) */
 .card.size-xs {
   padding: 0.5rem;
   min-height: 60px;
@@ -88,7 +87,6 @@
 .card.size-xs .card-title { font-size: 0.7rem; }
 .card.size-xs .card-value { font-size: 0.9rem; }
 
-/* Маленькая карточка (Устройство) */
 .card.size-sm {
   padding: 0.75rem;
   min-height: 80px;
@@ -97,7 +95,6 @@
 .card.size-sm .card-title { font-size: 0.75rem; }
 .card.size-sm .card-value { font-size: 1.1rem; }
 
-/* Большая карточка (Инструменты) */
 .card.size-lg {
   padding: 1.5rem;
   min-height: 130px;
@@ -133,7 +130,7 @@
   color: #7f8c8d;
 }
 
-/* ===== СЕТКА ВИДЖЕТОВ 2×2 (НЕ ТРОГАЕМ) ===== */
+/* ===== СЕТКА ВИДЖЕТОВ 2×2 ===== */
 .widgets-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -176,7 +173,89 @@
   color: #7f8c8d;
 }
 
-/* ===== АДАПТИВНОСТЬ ===== */
+/* ===== ОБЩИЙ БАННЕР ПРЕДУПРЕЖДЕНИЙ (для ВСЕХ устройств) ===== */
+.warning-banner {
+  background: linear-gradient(135deg, #ffe5e5 0%, #fff5f5 100%);
+  border: 2px solid #e74c3c;
+  border-radius: 10px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1.5rem;
+  color: #c0392b;
+  font-size: 0.95rem;
+  animation: pulse-warning-banner 2s infinite;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.warning-banner strong {
+  font-weight: 700;
+  margin-right: 0.5rem;
+  display: inline-block;
+}
+
+.warning-list {
+  margin: 0.5rem 0 0 1.5rem;
+  padding: 0;
+  list-style-type: disc;
+  list-style-position: outside;
+}
+
+.warning-list li {
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+@keyframes pulse-warning-banner {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.4); }
+  50% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); }
+}
+
+/* ===== КАРТОЧКА ФАЗ (для ВСЕХ устройств) ===== */
+.card-phases-error {
+  border-left: 4px solid #e74c3c !important;
+  background: linear-gradient(135deg, #ffe5e5 0%, white 100%);
+  animation: pulse-phases 2s infinite;
+}
+
+@keyframes pulse-phases {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(231, 76, 60, 0); }
+}
+
+.phases-indicators {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.phase-indicator {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.3s;
+  display: inline-block;
+  min-width: 2rem;
+  text-align: center;
+}
+
+.phase-indicator.phase-ok {
+  color: #27ae60;
+  background: rgba(39, 174, 96, 0.1);
+  border: 1px solid rgba(39, 174, 96, 0.3);
+}
+
+.phase-indicator.phase-lost {
+  color: #e74c3c;
+  background: rgba(231, 76, 60, 0.1);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+/* ===== АДАПТИВНОСТЬ (только правки размеров для мобильных) ===== */
 @media (max-width: 768px) {
   .dashboard-header {
     flex-direction: column;
@@ -225,20 +304,28 @@
   .outdoor-value {
     font-size: 1.25rem;
   }
-  /* ===== БАННЕР НЕИСПРАВНЫХ ДАТЧИКОВ ===== */
-.sensor-warning-banner {
-  background: linear-gradient(135deg, #ffe5e5 0%, #fff5f5 100%);
-  border: 2px solid #e74c3c;
-  border-radius: 10px;
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-  color: #c0392b;
-  font-size: 0.95rem;
-  animation: pulse-banner 2s infinite;
-}
 
-@keyframes pulse-banner {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.4); }
-  50% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); }
-}
+  /* Небольшие правки для мобильных */
+  .warning-banner {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .warning-list {
+    margin-left: 1rem;
+  }
+
+  .warning-list li {
+    font-size: 0.85rem;
+  }
+
+  .phases-indicators {
+    gap: 0.4rem;
+    font-size: 0.95rem;
+  }
+
+  .phase-indicator {
+    padding: 0.2rem 0.4rem;
+    min-width: 1.8rem;
+  }
 }

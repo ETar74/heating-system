@@ -70,6 +70,8 @@ function Dashboard() {
     return data[key] ? data[key].value : '—';
   };
 
+
+
   // Проверка неисправных датчиков (температура <= -127)
   const faultySensors = Object.entries(data)
     .filter(([key, val]) => {
@@ -86,6 +88,34 @@ function Dashboard() {
       };
       return names[key] || key;
     });
+
+  // Получить фазы
+  const getPhases = () => {
+    const phases = data.phases?.value;
+    if (!phases) return { L1: false, L2: false, L3: false };
+    return {
+      L1: phases.L1 || false,
+      L2: phases.L2 || false,
+      L3: phases.L3 || false
+    };
+  };
+
+  const phases = getPhases();
+  const phasesOk = phases.L1 && phases.L2 && phases.L3;
+  const phasesLost = [
+    !phases.L1 && 'L1',
+    !phases.L2 && 'L2',
+    !phases.L3 && 'L3'
+  ].filter(Boolean);
+
+  // Объединить все предупреждения
+  const allWarnings = [];
+  if (faultySensors.length > 0) {
+    allWarnings.push(`Неисправны датчики: ${faultySensors.join(', ')}`);
+  }
+  if (phasesLost.length > 0) {
+    allWarnings.push(`Потеря фаз: ${phasesLost.join(', ')}`);
+  }
 
   const openDetail = (paramKey) => {
     navigate(`/parameter/${paramKey}`);
@@ -106,10 +136,15 @@ function Dashboard() {
       </div>
 
       
-      {/* ⚠️ Баннер неисправных датчиков */}
-      {faultySensors.length > 0 && (
-        <div className="sensor-warning-banner">
-          ⚠️ <strong>Внимание:</strong> Неисправны датчики: {faultySensors.join(', ')}
+      {/* ⚠️ Общий баннер всех предупреждений */}
+      {allWarnings.length > 0 && (
+        <div className="warning-banner">
+          ⚠️ <strong>Внимание:</strong>
+          <ul className="warning-list">
+            {allWarnings.map((warning, idx) => (
+              <li key={idx}>{warning}</li>
+            ))}
+          </ul>
         </div>
       )}
 
@@ -126,10 +161,27 @@ function Dashboard() {
           </div>
 
           <div className="card size-sm">
-            <div className="card-icon">🕐</div>
+            <div className="card-icon"></div>
             <div className="card-title">Последняя связь</div>
             <div className="card-value small">
               {formatLastSeen(device.lastSeen)}
+            </div>
+          </div>
+
+          {/* ⚡ Карточка фаз — всегда показывается */}
+          <div className={`card size-sm ${!phasesOk ? 'card-phases-error' : ''}`}>
+            <div className="card-icon">⚡</div>
+            <div className="card-title">Фазы</div>
+            <div className="phases-indicators">
+              <span className={`phase-indicator ${phases.L1 ? 'phase-ok' : 'phase-lost'}`}>
+                L1
+              </span>
+              <span className={`phase-indicator ${phases.L2 ? 'phase-ok' : 'phase-lost'}`}>
+                L2
+              </span>
+              <span className={`phase-indicator ${phases.L3 ? 'phase-ok' : 'phase-lost'}`}>
+                L3
+              </span>
             </div>
           </div>
         </div>
