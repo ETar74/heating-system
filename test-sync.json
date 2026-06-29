@@ -1,0 +1,40 @@
+{
+  "deviceId": "ESP32-001",
+  "timestamp": 1735000000,
+  "uptime": 3600,
+  "firmware": "1.0.0",
+  "settings": {
+    "room_temp_target": 22.0,
+    "room_temp_threshold_on": 21.5,
+    "room_temp_threshold_off": 22.5,
+    "room_temp_hysteresis": 0.5,
+    "boiler_temp_target": 60,
+    "boiler_temp_threshold_on": 55,
+    "boiler_temp_threshold_off": 65,
+    "boiler_temp_hysteresis": 1,
+    "floor_temp_target": 25,
+    "floor_temp_threshold_on": 24,
+    "floor_temp_threshold_off": 26,
+    "floor_temp_hysteresis": 0.5,
+    "accumulator_temp_target": 65,
+    "accumulator_temp_threshold_on": 60,
+    "accumulator_temp_threshold_off": 70,
+    "accumulator_temp_hysteresis": 1,
+    "night_start": "22:00",
+    "night_end": "06:00"
+  },
+  "telemetry": {
+    "room_temp": 22.3,
+    "outdoor_temp": -5.2,
+    "boiler_temp": 58.5,
+    "floor_temp": 24.8,
+    "accumulator_temp": 65.0
+  },
+  "device_status": {
+    "boiler": "on",
+    "floor_pump": "off",
+    "radiator_pump": "on",
+    "elec_boiler": "off"
+  },
+  "events": []
+}

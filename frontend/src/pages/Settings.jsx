@@ -79,7 +79,6 @@ function Settings() {
         { key: 'room_temp_target', label: 'Целевая температура', unit: '°C', type: 'number', step: 0.5 },
         { key: 'room_temp_threshold_on', label: 'Порог включения', unit: '°C', type: 'number', step: 0.5 },
         { key: 'room_temp_threshold_off', label: 'Порог выключения', unit: '°C', type: 'number', step: 0.5 },
-        { key: 'room_temp_hysteresis', label: 'Гистерезис', unit: '°C', type: 'number', step: 0.1 },
       ]
     },
     {
@@ -89,7 +88,6 @@ function Settings() {
         { key: 'boiler_temp_target', label: 'Целевая температура', unit: '°C', type: 'number', step: 1 },
         { key: 'boiler_temp_threshold_on', label: 'Порог включения', unit: '°C', type: 'number', step: 1 },
         { key: 'boiler_temp_threshold_off', label: 'Порог выключения', unit: '°C', type: 'number', step: 1 },
-        { key: 'boiler_temp_hysteresis', label: 'Гистерезис', unit: '°C', type: 'number', step: 1 },
       ]
     },
     {
@@ -99,7 +97,6 @@ function Settings() {
         { key: 'floor_temp_target', label: 'Целевая температура', unit: '°C', type: 'number', step: 1 },
         { key: 'floor_temp_threshold_on', label: 'Порог включения', unit: '°C', type: 'number', step: 1 },
         { key: 'floor_temp_threshold_off', label: 'Порог выключения', unit: '°C', type: 'number', step: 1 },
-        { key: 'floor_temp_hysteresis', label: 'Гистерезис', unit: '°C', type: 'number', step: 0.5 },
       ]
     },
     {
@@ -109,7 +106,6 @@ function Settings() {
         { key: 'accumulator_temp_target', label: 'Целевая температура', unit: '°C', type: 'number', step: 1 },
         { key: 'accumulator_temp_threshold_on', label: 'Порог включения', unit: '°C', type: 'number', step: 1 },
         { key: 'accumulator_temp_threshold_off', label: 'Порог выключения', unit: '°C', type: 'number', step: 1 },
-        { key: 'accumulator_temp_hysteresis', label: 'Гистерезис', unit: '°C', type: 'number', step: 1 },
       ]
     },
     {

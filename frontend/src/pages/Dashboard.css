@@ -225,4 +225,20 @@
   .outdoor-value {
     font-size: 1.25rem;
   }
+  /* ===== БАННЕР НЕИСПРАВНЫХ ДАТЧИКОВ ===== */
+.sensor-warning-banner {
+  background: linear-gradient(135deg, #ffe5e5 0%, #fff5f5 100%);
+  border: 2px solid #e74c3c;
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  color: #c0392b;
+  font-size: 0.95rem;
+  animation: pulse-banner 2s infinite;
+}
+
+@keyframes pulse-banner {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.4); }
+  50% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); }
+}
 }

@@ -15,6 +15,14 @@ const prisma = new PrismaClient();
 
 app.use(cors());
 app.use(express.json());
+// Логирование всех запросов
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  if (req.body && Object.keys(req.body).length > 0) {
+    console.log('Body:', JSON.stringify(req.body).substring(0, 200));
+  }
+  next();
+});
 
 const clients = new Set();
 
@@ -239,12 +247,26 @@ app.get('/api/telemetry/latest', authenticateToken, async (req, res) => {
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
 
+    // Сначала попробовать прочитать из кэша DeviceCache
+    const cache = await prisma.deviceCache.findFirst({
+      orderBy: { lastSync: 'desc' }
+    });
+    
+    if (cache && cache.telemetry) {
+      const latest = {};
+      for (const [parameter, value] of Object.entries(cache.telemetry)) {
+        latest[parameter] = { value, timestamp: cache.lastSync };
+      }
+      
+      console.log(`📊 Telemetry from cache:`, Object.keys(latest));
+      return res.json(latest);
+    }
+    
+    // Если кэша нет, читать из старой таблицы telemetry
     const telemetry = await prisma.telemetry.findMany({
       orderBy: { timestamp: 'desc' },
       take: 100
     });
-
-    console.log(`📊 Telemetry query returned ${telemetry.length} records`);
 
     const latest = {};
     telemetry.forEach(t => {
@@ -253,11 +275,7 @@ app.get('/api/telemetry/latest', authenticateToken, async (req, res) => {
       }
     });
 
-    console.log(`📊 Latest parameters:`, Object.keys(latest));
-    console.log(`📊 Room temp:`, latest['room_temp']);
-    console.log(`📊 Outdoor temp:`, latest['outdoor_temp']);
-    console.log(`📊 Boiler temp:`, latest['boiler_temp']);
-
+    console.log(`📊 Telemetry from DB:`, Object.keys(latest));
     res.json(latest);
   } catch (error) {
     console.error(`❌ Error in /api/telemetry/latest:`, error);
@@ -286,13 +304,33 @@ app.get('/api/telemetry/history', authenticateToken, async (req, res) => {
 
 app.get('/api/settings', authenticateToken, async (req, res) => {
   try {
-        // Запрещаем кэширование
+    // Запрещаем кэширование
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
+    
+    // Сначала пробуем прочитать из кэша DeviceCache (данные от ESP32)
+    const cache = await prisma.deviceCache.findFirst({
+      orderBy: { lastSync: 'desc' }
+    });
+    
+    if (cache && cache.settings && Object.keys(cache.settings).length > 0) {
+      // Преобразовать JSON в массив параметров (как ожидает фронтенд)
+      const settings = Object.entries(cache.settings).map(([key, value]) => ({
+        key,
+        value: String(value),
+        updatedAt: cache.lastSync
+      }));
+      
+      return res.json(settings);
+    }
+    
+    // FALLBACK: Если кэш пустой — вернуть из старой таблицы Parameter
+    console.log('⚠️ Device cache is empty, falling back to Parameter table');
     const parameters = await prisma.parameter.findMany();
     res.json(parameters);
   } catch (error) {
+    console.error('Error in GET /api/settings:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -301,21 +339,67 @@ app.put('/api/settings/:key', authenticateToken, requireRole('ADMIN', 'OPERATOR'
   try {
     const { key } = req.params;
     const { value } = req.body;
-
-    const updated = await prisma.parameter.update({
-      where: { key },
-      data: { value, updatedAt: new Date() }
+    
+    // Найти устройство
+    const device = await prisma.device.findFirst({
+      orderBy: { createdAt: 'desc' }
     });
+    
+    if (!device) {
+      return res.status(404).json({ error: 'No device configured' });
+    }
+
+    // Создать команду для ESP32
+    const command = await prisma.command.create({
+      data: {
+        deviceId: device.id,
+        command: 'SET_SETTING',
+        payload: { key, value: parseFloat(value) || value },
+        status: 'pending'
+      }
+    });
+    
+    // Оптимистично обновить кэш (чтобы UI сразу показал новое значение)
+    const cache = await prisma.deviceCache.findFirst({
+      orderBy: { lastSync: 'desc' }
+    });
+    
+    if (cache && cache.settings) {
+      const settings = { ...cache.settings };
+      settings[key] = parseFloat(value) || value;
+      
+      await prisma.deviceCache.update({
+        where: { id: cache.id },
+        data: { settings }
+      });
+    }
+    
+    // Также обновить старую таблицу Parameter (для обратной совместимости)
+    try {
+      await prisma.parameter.upsert({
+        where: { key },
+        update: { value: String(value) },
+        create: { key, value: String(value) }
+      });
+    } catch (e) {
+      // Игнорируем ошибку, если параметра нет в старой таблице
+    }
 
     await prisma.event.create({
       data: {
         eventType: 'INFO',
-        message: `Setting ${key} updated to ${value} by ${req.user.username}`
+        message: `Setting ${key} change requested by ${req.user.username}`
       }
     });
-
+    
+    // Отправить обновление через WebSocket
     broadcast({ type: 'settings_updated' });
-    res.json(updated);
+    
+    res.json({ 
+      success: true, 
+      commandId: command.id,
+      message: 'Command queued for ESP32'
+    });
   } catch (error) {
     console.error('Error updating setting:', error);
     res.status(500).json({ error: error.message });
@@ -404,7 +488,12 @@ app.get('/api/commands/pending', async (req, res) => {
       orderBy: { createdAt: 'asc' }
     });
 
-    res.json(commands);
+    res.json(commands.map(cmd => ({
+      id: cmd.id,
+      type: cmd.command,
+      payload: cmd.payload,
+      createdAt: cmd.createdAt.getTime()
+    })));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -420,14 +509,29 @@ app.get('/api/device/status', authenticateToken, async (req, res) => {
       return res.json({
         name: 'Не настроено',
         online: false,
-        lastSeen: null
+        lastSeen: null,
+        deviceStatus: {},
+        uptime: null,
+        firmware: null
       });
     }
     
+    // Получить кэш для дополнительной информации
+    const cache = await prisma.deviceCache.findFirst({
+      where: { deviceId: device.serialNumber || 'ESP32-001' }
+    });
+    
+    // Проверить, онлайн ли устройство (последняя синхронизация менее 2 минут назад)
+    const isOnline = device.lastSeen && (Date.now() - device.lastSeen.getTime()) < 120000;
+    
     res.json({
       name: device.name,
-      online: device.online,
-      lastSeen: device.lastSeen
+      online: isOnline,
+      lastSeen: device.lastSeen,
+      deviceStatus: cache?.deviceStatus || {},
+      uptime: cache?.uptime,
+      firmware: cache?.firmware || device.firmwareVersion,
+      lastSync: cache?.lastSync
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -481,6 +585,181 @@ app.post('/api/device/command/:id/executed', async (req, res) => {
       where: { id: commandId },
       data: { status: 'executed', executedAt: new Date() }
     });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
+// ESP32 SYNC API - Приём данных от ESP32
+// ============================================
+
+// ESP32 отправляет все данные (настройки, телеметрию, статусы)
+app.post('/api/device/sync', async (req, res) => {
+  try {
+    const { deviceId, timestamp, uptime, firmware, settings, telemetry, device_status, events, alarms } = req.body;
+    
+    console.log(`📡 Sync from ${deviceId || 'unknown'} at ${new Date().toISOString()}`);
+    
+    // Обновить кэш последних данных
+    await prisma.deviceCache.upsert({
+      where: { deviceId: deviceId || 'ESP32-001' },
+      update: {
+        settings: settings || undefined,
+        telemetry: telemetry || undefined,
+        deviceStatus: device_status || undefined,
+        lastSync: new Date(),
+        uptime: uptime,
+        firmware: firmware
+      },
+      create: {
+        deviceId: deviceId || 'ESP32-001',
+        settings: settings || {},
+        telemetry: telemetry || {},
+        deviceStatus: device_status || {},
+        lastSync: new Date(),
+        uptime: uptime,
+        firmware: firmware
+      }
+    });
+    
+    // Также обновить статус устройства в таблице Device
+    const device = await prisma.device.findFirst({
+      where: { serialNumber: deviceId }
+    });
+    
+    if (device) {
+      await prisma.device.update({
+        where: { id: device.id },
+        data: { 
+          online: true, 
+          lastSeen: new Date(),
+          firmwareVersion: firmware
+        }
+      });
+    }
+    
+    // Сохранить события в историю
+    if (events && Array.isArray(events) && events.length > 0) {
+      for (const event of events) {
+        // Проверить, не было ли уже такое событие (по eventId)
+        const existing = await prisma.deviceEvent.findFirst({
+          where: {
+            deviceId: deviceId || 'ESP32-001',
+            eventId: event.id
+          }
+        });
+        
+        if (!existing) {
+          await prisma.deviceEvent.create({
+            data: {
+              deviceId: deviceId || 'ESP32-001',
+              eventId: event.id,
+              timestamp: new Date(event.timestamp * 1000),
+              type: event.type,
+              message: event.message
+            }
+          });
+          
+          // Также сохранить в основную таблицу events (для UI)
+          await prisma.event.create({
+            data: {
+              deviceId: device?.id,
+              eventType: event.type,
+              message: event.message
+            }
+          });
+        }
+      }
+    }
+    
+    // Сохранить телеметрию в историю (для графиков)
+    if (telemetry && device) {
+      for (const [parameter, value] of Object.entries(telemetry)) {
+        await prisma.telemetry.create({
+          data: {
+            deviceId: device.id,
+            parameter,
+            value: String(value)
+          }
+        });
+      }
+    }
+    
+    // Забрать команды из очереди для ESP32
+    const commands = await prisma.command.findMany({
+      where: { 
+        status: 'pending',
+        deviceId: device?.id || 1
+      },
+      orderBy: { createdAt: 'asc' }
+    });
+    
+    // Пометить команды как отправленные
+    if (commands.length > 0) {
+      await prisma.command.updateMany({
+        where: { id: { in: commands.map(c => c.id) } },
+        data: { status: 'sent' }
+      });
+    }
+    
+    // Отправить обновление через WebSocket клиентам
+    broadcast({ 
+      type: 'device_sync', 
+      deviceId,
+      telemetry,
+      device_status,
+      timestamp: Date.now()
+    });
+    
+    res.json({
+      success: true,
+      serverTime: Math.floor(Date.now() / 1000),
+      commands: commands.map(cmd => ({
+        id: cmd.id,
+        type: cmd.command,
+        payload: cmd.payload,
+        createdAt: cmd.createdAt.getTime()
+      }))
+    });
+    
+  } catch (error) {
+    console.error('❌ Error in /api/device/sync:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ESP32 подтверждает выполнение команды
+app.post('/api/device/command/:id/executed', async (req, res) => {
+  try {
+    const commandId = parseInt(req.params.id);
+    const { success, message } = req.body;
+    
+    await prisma.command.update({
+      where: { id: commandId },
+      data: { 
+        status: success ? 'executed' : 'failed',
+        executedAt: new Date()
+      }
+    });
+    
+    if (success) {
+      await prisma.event.create({
+        data: {
+          eventType: 'INFO',
+          message: `Command ${commandId} executed successfully: ${message || ''}`
+        }
+      });
+    } else {
+      await prisma.event.create({
+        data: {
+          eventType: 'ERROR',
+          message: `Command ${commandId} failed: ${message || 'Unknown error'}`
+        }
+      });
+    }
+    
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -707,13 +986,32 @@ async function initializeDatabase() {
       console.log('Default admin user created (username: admin, password: admin123)');
     }
 
+    // Инициализация настроек по умолчанию (если их нет)
     const defaultParams = [
-      { key: 'night_start', value: '22:00', description: 'Ночной режим начало' },
-      { key: 'night_end', value: '06:00', description: 'Ночной режим конец' },
-      { key: 'room_target_temp', value: '22', description: 'Целевая температура помещения' },
-      { key: 'floor_pump_on_temp', value: '25', description: 'Температура включения насоса теплого пола' },
-      { key: 'floor_pump_off_temp', value: '20', description: 'Температура выключения насоса теплого пола' },
-      { key: 'boiler_max_temp', value: '60', description: 'Максимальная температура котла' }
+      // Помещение
+      { key: 'room_temp_target', value: '22.0', description: 'Целевая температура помещения' },
+      { key: 'room_temp_threshold_on', value: '21.5', description: 'Порог включения отопления' },
+      { key: 'room_temp_threshold_off', value: '22.5', description: 'Порог выключения отопления' },
+      
+      // Котёл
+      { key: 'boiler_temp_target', value: '60.0', description: 'Целевая температура котла' },
+      { key: 'boiler_temp_threshold_on', value: '55.0', description: 'Порог включения котла' },
+      { key: 'boiler_temp_threshold_off', value: '65.0', description: 'Порог выключения котла' },
+      
+      // Тёплый пол
+      { key: 'floor_temp_target', value: '25.0', description: 'Целевая температура тёплого пола' },
+      { key: 'floor_temp_threshold_on', value: '24.0', description: 'Порог включения насоса ТП' },
+      { key: 'floor_temp_threshold_off', value: '26.0', description: 'Порог выключения насоса ТП' },
+      
+      // Теплоаккумулятор
+      { key: 'accumulator_temp_target', value: '65.0', description: 'Целевая температура ТА' },
+      { key: 'accumulator_temp_threshold_on', value: '60.0', description: 'Порог включения ЭК' },
+      { key: 'accumulator_temp_threshold_off', value: '70.0', description: 'Порог выключения ЭК' },
+      
+      // Режимы
+      { key: 'night_start', value: '22:00', description: 'Начало ночного режима' },
+      { key: 'night_end', value: '06:00', description: 'Конец ночного режима' },
+      { key: 'manual_timeout', value: '30', description: 'Таймаут ручного управления (сек)' }
     ];
 
     for (const param of defaultParams) {
@@ -735,6 +1033,7 @@ async function initializeDatabase() {
       });
     }
 
+    console.log('✅ Default parameters initialized');
     console.log('Database initialized successfully');
   } catch (error) {
     console.error('Database initialization error:', error);

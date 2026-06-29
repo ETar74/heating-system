@@ -7,7 +7,6 @@ function TempWidget({ paramKey, title, subtitle, icon, unit = '°C', min = 15, m
   const [targetValue, setTargetValue] = useState(null);
   const [thresholdOn, setThresholdOn] = useState(null);
   const [thresholdOff, setThresholdOff] = useState(null);
-  const [hysteresis, setHysteresis] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -37,17 +36,14 @@ function TempWidget({ paramKey, title, subtitle, icon, unit = '°C', min = 15, m
       const target = params.find(p => p.key === `${paramKey}_target`);
       const on = params.find(p => p.key === `${paramKey}_threshold_on`);
       const off = params.find(p => p.key === `${paramKey}_threshold_off`);
-      const hyst = params.find(p => p.key === `${paramKey}_hysteresis`);
       
       console.log(`🔧 [${paramKey}] Found target:`, target);
       console.log(`🔧 [${paramKey}] Found threshold_on:`, on);
       console.log(`🔧 [${paramKey}] Found threshold_off:`, off);
-      console.log(`🔧 [${paramKey}] Found hysteresis:`, hyst);
       
       if (target) setTargetValue(parseFloat(target.value));
       if (on) setThresholdOn(parseFloat(on.value));
       if (off) setThresholdOff(parseFloat(off.value));
-      if (hyst) setHysteresis(parseFloat(hyst.value));
     } catch (error) {
       console.error(`❌ [${paramKey}] Error loading settings:`, error);
       console.error(`❌ [${paramKey}] Error response:`, error.response);
@@ -109,9 +105,13 @@ function TempWidget({ paramKey, title, subtitle, icon, unit = '°C', min = 15, m
     ? ((thresholdOff - min) / range) * 100 
     : null;
 
+  // Проверка неисправности датчика
+  const isSensorFaulty = currentValue !== null && currentValue <= -127;
+
   // Цвет текущего значения
   const getValueColor = () => {
     if (currentValue === null) return '#95a5a6';
+    if (isSensorFaulty) return '#e74c3c'; // 🔴 Красный при неисправности
     if (thresholdOn !== null && currentValue < thresholdOn) return '#3498db';
     if (thresholdOff !== null && currentValue > thresholdOff) return '#e74c3c';
     return '#27ae60';
@@ -155,7 +155,11 @@ function TempWidget({ paramKey, title, subtitle, icon, unit = '°C', min = 15, m
           <span>{title}</span>
         </div>
         <div className="widget-value" style={{ color: getValueColor() }}>
-          {currentValue !== null ? `${currentValue.toFixed(1)}${unit}` : '—'}
+          {isSensorFaulty ? (
+            <span title="Датчик неисправен">⚠️ ОШИБКА</span>
+          ) : (
+            currentValue !== null ? `${currentValue.toFixed(1)}${unit}` : '—'
+          )}
         </div>
       </div>
 
@@ -245,12 +249,13 @@ function TempWidget({ paramKey, title, subtitle, icon, unit = '°C', min = 15, m
             <span className="widget-info-label">Выкл:</span>
             <span className="widget-info-value" style={{ color: '#e74c3c' }}>{thresholdOff}{unit}</span>
           </div>
-          {hysteresis !== null && (
-            <div className="widget-info-item">
-              <span className="widget-info-label">±</span>
-              <span className="widget-info-value">{hysteresis}{unit}</span>
-            </div>
-          )}
+        </div>
+      )}
+
+      {/* ⚠️ Предупреждение о неисправном датчике */}
+      {isSensorFaulty && (
+        <div className="widget-warning">
+          ⚠️ Датчик неисправен ({currentValue}°C)
         </div>
       )}
     </div>

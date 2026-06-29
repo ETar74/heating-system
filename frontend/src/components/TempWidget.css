@@ -256,4 +256,27 @@
   .widget-target-line {
     height: 17px;
   }
+/* ===== ПРЕДУПРЕЖДЕНИЕ О НЕИСПРАВНОМ ДАТЧИКЕ ===== */
+.widget-warning {
+  text-align: center;
+  color: #c0392b;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  background: #ffe5e5;
+  border: 1px solid #e74c3c;
+  border-radius: 6px;
+  animation: pulse-warning 2s infinite;
+}
+
+@keyframes pulse-warning {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Ошибка в значении */
+.widget-value span {
+  font-size: 1.2rem;
+}
 }

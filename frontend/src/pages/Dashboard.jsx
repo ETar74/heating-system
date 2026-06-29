@@ -70,6 +70,23 @@ function Dashboard() {
     return data[key] ? data[key].value : '—';
   };
 
+  // Проверка неисправных датчиков (температура <= -127)
+  const faultySensors = Object.entries(data)
+    .filter(([key, val]) => {
+      const temp = parseFloat(val?.value);
+      return !isNaN(temp) && temp <= -127;
+    })
+    .map(([key]) => {
+      const names = {
+        room_temp: 'Помещение',
+        boiler_temp: 'Котёл',
+        floor_temp: 'Тёплый пол',
+        accumulator_temp: 'Теплоаккумулятор',
+        outdoor_temp: 'Улица'
+      };
+      return names[key] || key;
+    });
+
   const openDetail = (paramKey) => {
     navigate(`/parameter/${paramKey}`);
   };
@@ -87,6 +104,14 @@ function Dashboard() {
           {wsStatus === 'connected' ? '🟢 Сервер: онлайн' : '🔴 Сервер: офлайн'}
         </div>
       </div>
+
+      
+      {/* ⚠️ Баннер неисправных датчиков */}
+      {faultySensors.length > 0 && (
+        <div className="sensor-warning-banner">
+          ⚠️ <strong>Внимание:</strong> Неисправны датчики: {faultySensors.join(', ')}
+        </div>
+      )}
 
       {/* Устройство — маленькие карточки (size-sm) */}
       <div className="section">
