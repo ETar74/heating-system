@@ -1,6 +1,7 @@
-## 📄 Файл: `API.md`
+### ASSISTANT
+# 📄 API.md - Полная документация API системы отопления
 
-**Где создать:** `D:\KotelAI\heating-system\API.md`
+**Создайте файл:** `D:\KotelAI\heating-system\API.md`
 
 **Содержимое:**
 
@@ -8,8 +9,8 @@
 # 🔌 API Documentation - Heating System
 
 **Base URL:** `http://localhost:3000/api`  
-**Версия:** 1.0  
-**Дата:** 2026-06-26
+**Версия:** 1.1  
+**Дата:** 2026-06-29
 
 ---
 
@@ -54,7 +55,9 @@
 
 **Пример (PowerShell):**
 ```powershell
-$response = Invoke-RestMethod -Uri "http://localhost:3000/api/auth/login" -Method POST -ContentType "application/json" -Body '{"username":"admin","password":"admin123"}'
+$response = Invoke-RestMethod -Uri "http://localhost:3000/api/auth/login" `
+  -Method POST -ContentType "application/json" `
+  -Body '{"username":"admin","password":"admin123"}'
 $token = $response.token
 ```
 
@@ -120,13 +123,6 @@ Authorization: Bearer <token>
     "role": "ADMIN",
     "telegramId": "123456789",
     "createdAt": "2026-06-20T10:00:00.000Z"
-  },
-  {
-    "id": 2,
-    "username": "operator",
-    "role": "OPERATOR",
-    "telegramId": null,
-    "createdAt": "2026-06-21T14:30:00.000Z"
   }
 ]
 ```
@@ -154,9 +150,9 @@ Content-Type: application/json
 ```
 
 **Параметры:**
-- `username` (string, обязательный) - логин пользователя
+- `username` (string, обязательный) - логин
 - `password` (string, обязательный) - пароль
-- `role` (string, обязательный) - роль: "ADMIN", "OPERATOR", "VIEWER"
+- `role` (string, обязательный) - "ADMIN", "OPERATOR", "VIEWER"
 - `telegramId` (string, опциональный) - Telegram ID
 
 **Ответ (201 Created):**
@@ -172,7 +168,7 @@ Content-Type: application/json
 
 ### PUT /users/:id
 
-**Описание:** Обновить данные пользователя
+**Описание:** Обновить пользователя
 
 **Заголовки:**
 ```
@@ -180,10 +176,7 @@ Authorization: Bearer <token>
 Content-Type: application/json
 ```
 
-**Параметры URL:**
-- `id` (number) - ID пользователя
-
-**Тело запроса:**
+**Тело запроса (все поля опциональны):**
 ```json
 {
   "username": "newname",
@@ -193,30 +186,11 @@ Content-Type: application/json
 }
 ```
 
-**Примечание:** Все поля опциональны. Если пароль не указан, он не меняется.
-
-**Ответ (200 OK):**
-```json
-{
-  "id": 3,
-  "username": "newname",
-  "role": "OPERATOR"
-}
-```
-
 ---
 
 ### DELETE /users/:id
 
 **Описание:** Удалить пользователя
-
-**Заголовки:**
-```
-Authorization: Bearer <token>
-```
-
-**Параметры URL:**
-- `id` (number) - ID пользователя
 
 **Ответ (200 OK):**
 ```json
@@ -245,38 +219,36 @@ Authorization: Bearer <token>
     "key": "room_temp_target",
     "value": "22.0",
     "description": "Целевая температура помещения",
-    "updatedAt": "2026-06-26T09:54:10.801Z"
+    "updatedAt": "2026-06-29T14:35:10.801Z"
   },
   {
-    "key": "boiler_temp_target",
-    "value": "60.0",
-    "description": "Целевая температура котла",
-    "updatedAt": "2026-06-26T09:54:10.801Z"
-  },
-  {
-    "key": "floor_pump_on_temp",
-    "value": "25",
-    "description": "Температура включения насоса теплого пола",
-    "updatedAt": "2026-06-26T09:54:10.801Z"
+    "key": "room_temp_threshold_on",
+    "value": "21.5",
+    "description": "Порог включения отопления",
+    "updatedAt": "2026-06-29T14:35:10.801Z"
   }
 ]
 ```
 
 **Доступные ключи настроек:**
-- `room_temp_target` - целевая температура помещения
-- `room_temp_threshold_on` - порог включения отопления
-- `room_temp_threshold_off` - порог выключения отопления
-- `room_temp_hysteresis` - гистерезис температуры помещения
-- `boiler_temp_target` - целевая температура котла
-- `boiler_temp_threshold_on` - порог включения котла
-- `boiler_temp_threshold_off` - порог выключения котла
-- `boiler_temp_hysteresis` - гистерезис температуры котла
-- `floor_temp_target` - целевая температура теплого пола
-- `floor_pump_on_temp` - температура включения насоса ТП
-- `floor_pump_off_temp` - температура выключения насоса ТП
-- `boiler_max_temp` - максимальная температура котла
-- `night_start` - начало ночного режима (HH:MM)
-- `night_end` - конец ночного режима (HH:MM)
+
+| Ключ | Описание | Тип | По умолчанию |
+|------|----------|-----|--------------|
+| `room_temp_target` | Целевая температура помещения | °C | 22.0 |
+| `room_temp_threshold_on` | Порог включения отопления | °C | 21.5 |
+| `room_temp_threshold_off` | Порог выключения отопления | °C | 22.5 |
+| `boiler_temp_target` | Целевая температура котла | °C | 60.0 |
+| `boiler_temp_threshold_on` | Порог включения котла | °C | 55.0 |
+| `boiler_temp_threshold_off` | Порог выключения котла | °C | 65.0 |
+| `floor_temp_target` | Целевая температура тёплого пола | °C | 25.0 |
+| `floor_temp_threshold_on` | Порог включения насоса ТП | °C | 24.0 |
+| `floor_temp_threshold_off` | Порог выключения насоса ТП | °C | 26.0 |
+| `accumulator_temp_target` | Целевая температура ТА | °C | 65.0 |
+| `accumulator_temp_threshold_on` | Порог включения ЭК | °C | 60.0 |
+| `accumulator_temp_threshold_off` | Порог выключения ЭК | °C | 70.0 |
+| `night_start` | Начало ночного режима | HH:MM | 22:00 |
+| `night_end` | Конец ночного режима | HH:MM | 06:00 |
+| `manual_timeout` | Таймаут ручного управления | сек | 30 |
 
 ---
 
@@ -292,9 +264,6 @@ Authorization: Bearer <token>
 Content-Type: application/json
 ```
 
-**Параметры URL:**
-- `key` (string) - ключ настройки (например, `room_temp_target`)
-
 **Тело запроса:**
 ```json
 {
@@ -305,9 +274,9 @@ Content-Type: application/json
 **Ответ (200 OK):**
 ```json
 {
-  "key": "room_temp_target",
-  "value": "23.5",
-  "updatedAt": "2026-06-26T10:15:30.000Z"
+  "success": true,
+  "commandId": 5,
+  "message": "Command queued for ESP32"
 }
 ```
 
@@ -315,7 +284,8 @@ Content-Type: application/json
 ```powershell
 $headers = @{Authorization="Bearer $token"}
 $body = @{value="23.5"} | ConvertTo-Json
-Invoke-RestMethod -Uri "http://localhost:3000/api/settings/room_temp_target" -Method PUT -Headers $headers -ContentType "application/json" -Body $body
+Invoke-RestMethod -Uri "http://localhost:3000/api/settings/room_temp_target" `
+  -Method PUT -Headers $headers -ContentType "application/json" -Body $body
 ```
 
 ---
@@ -326,36 +296,13 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/settings/room_temp_target" -Me
 
 **Требуемая роль:** ADMIN, OPERATOR
 
-**Заголовки:**
-```
-Authorization: Bearer <token>
-Content-Type: application/json
-```
-
 **Тело запроса:**
 ```json
 {
   "parameters": [
-    {
-      "key": "room_temp_target",
-      "value": "22.0"
-    },
-    {
-      "key": "boiler_temp_target",
-      "value": "60.0"
-    },
-    {
-      "key": "night_start",
-      "value": "22:00"
-    }
+    {"key": "room_temp_target", "value": "22.0"},
+    {"key": "boiler_temp_target", "value": "60.0"}
   ]
-}
-```
-
-**Ответ (200 OK):**
-```json
-{
-  "message": "Settings updated"
 }
 ```
 
@@ -376,64 +323,62 @@ Authorization: Bearer <token>
 ```json
 {
   "room_temp": {
-    "value": "22.3",
-    "timestamp": "2026-06-26T09:54:10.801Z"
+    "value": 22.3,
+    "timestamp": "2026-06-29T14:35:10.801Z"
   },
   "boiler_temp": {
-    "value": "58.5",
-    "timestamp": "2026-06-26T09:54:10.801Z"
+    "value": 58.5,
+    "timestamp": "2026-06-29T14:35:10.801Z"
   },
   "floor_temp": {
-    "value": "24.8",
-    "timestamp": "2026-06-26T09:54:10.801Z"
-  },
-  "outdoor_temp": {
-    "value": "-5.2",
-    "timestamp": "2026-06-26T09:54:10.801Z"
+    "value": 24.8,
+    "timestamp": "2026-06-29T14:35:10.801Z"
   },
   "accumulator_temp": {
-    "value": "65.0",
-    "timestamp": "2026-06-26T09:54:10.801Z"
+    "value": 65.0,
+    "timestamp": "2026-06-29T14:35:10.801Z"
+  },
+  "outdoor_temp": {
+    "value": -5.2,
+    "timestamp": "2026-06-29T14:35:10.801Z"
+  },
+  "phases": {
+    "value": {
+      "L1": true,
+      "L2": true,
+      "L3": true
+    },
+    "timestamp": "2026-06-29T14:35:10.801Z"
   }
 }
 ```
+
+**Параметры телеметрии:**
+
+| Ключ | Описание | Единица |
+|------|----------|---------|
+| `room_temp` | Температура помещения | °C |
+| `boiler_temp` | Температура котла | °C |
+| `floor_temp` | Температура тёплого пола | °C |
+| `accumulator_temp` | Температура теплоаккумулятора | °C |
+| `outdoor_temp` | Температура улицы | °C |
+| `phases` | Состояние фаз (L1, L2, L3) | bool |
+
+**Примечание:** Значение `-127` означает неисправность датчика.
 
 ---
 
 ### GET /telemetry/history
 
-**Описание:** Получить историю показаний датчика
-
-**Заголовки:**
-```
-Authorization: Bearer <token>
-```
+**Описание:** Получить историю показаний
 
 **Query параметры:**
-- `parameter` (string) - название параметра (например, `room_temp`)
-- `hours` (number, опциональный) - период в часах (по умолчанию 24)
+- `parameter` (string) - параметр (например, `room_temp`)
+- `hours` (number) - период в часах (по умолчанию 24)
 
-**Пример запроса:**
+**Пример:**
 ```
 GET /api/telemetry/history?parameter=room_temp&hours=48
-```
-
-**Ответ (200 OK):**
-```json
-[
-  {
-    "id": 1,
-    "parameter": "room_temp",
-    "value": "22.3",
-    "timestamp": "2026-06-26T09:54:10.801Z"
-  },
-  {
-    "id": 2,
-    "parameter": "room_temp",
-    "value": "22.1",
-    "timestamp": "2026-06-26T09:49:10.801Z"
-  }
-]
 ```
 
 ---
@@ -444,18 +389,8 @@ GET /api/telemetry/history?parameter=room_temp&hours=48
 
 **Описание:** Получить журнал событий
 
-**Заголовки:**
-```
-Authorization: Bearer <token>
-```
-
 **Query параметры:**
-- `limit` (number, опциональный) - количество событий (по умолчанию 100)
-
-**Пример запроса:**
-```
-GET /api/events?limit=50
-```
+- `limit` (number) - количество (по умолчанию 100)
 
 **Ответ (200 OK):**
 ```json
@@ -464,25 +399,13 @@ GET /api/events?limit=50
     "id": 1,
     "eventType": "INFO",
     "message": "User admin logged in",
-    "createdAt": "2026-06-26T09:54:10.801Z"
-  },
-  {
-    "id": 2,
-    "eventType": "WARNING",
-    "message": "High temperature detected",
-    "createdAt": "2026-06-26T09:50:00.000Z"
-  },
-  {
-    "id": 3,
-    "eventType": "ERROR",
-    "message": "Sensor connection lost",
-    "createdAt": "2026-06-26T09:45:00.000Z"
+    "createdAt": "2026-06-29T14:35:10.801Z"
   }
 ]
 ```
 
 **Типы событий:**
-- `INFO` - информационное сообщение
+- `INFO` - информационное
 - `WARNING` - предупреждение
 - `ERROR` - ошибка
 - `ALARM` - аварийная ситуация
@@ -497,12 +420,6 @@ GET /api/events?limit=50
 
 **Требуемая роль:** ADMIN, OPERATOR
 
-**Заголовки:**
-```
-Authorization: Bearer <token>
-Content-Type: application/json
-```
-
 **Тело запроса:**
 ```json
 {
@@ -512,76 +429,54 @@ Content-Type: application/json
 ```
 
 **Доступные команды:**
-- `boiler_on` - включить котёл
-- `boiler_off` - выключить котёл
-- `floor_pump_on` - включить насос тёплого пола
-- `floor_pump_off` - выключить насос тёплого пола
-- `radiator_pump_on` - включить насос радиаторов
-- `radiator_pump_off` - выключить насос радиаторов
-
-**Ответ (200 OK):**
-```json
-{
-  "id": 1,
-  "command": "boiler_on",
-  "payload": {},
-  "status": "pending",
-  "createdAt": "2026-06-26T10:15:30.000Z"
-}
-```
+- `boiler_on` / `boiler_off`
+- `floor_pump_on` / `floor_pump_off`
+- `radiator_pump_on` / `radiator_pump_off`
 
 ---
 
 ### GET /commands/pending
 
-**Описание:** Получить список команд в очереди (для ESP32)
-
-**Заголовки:** Не требуются (публичный эндпоинт)
+**Описание:** Получить команды в очереди (для ESP32)
 
 **Ответ (200 OK):**
 ```json
 [
   {
-    "id": 1,
-    "command": "SET_SETTING",
+    "id": 5,
+    "type": "SET_SETTING",
     "payload": {
       "key": "room_temp_target",
-      "value": 23
+      "value": 23.0
     },
-    "status": "pending",
-    "createdAt": "2026-06-26T10:15:30.000Z"
+    "createdAt": 1735000000
   }
 ]
 ```
 
 ---
 
-## 📡 Устройства
+##  Устройства
 
 ### GET /device/status
 
 **Описание:** Получить статус устройства
-
-**Заголовки:**
-```
-Authorization: Bearer <token>
-```
 
 **Ответ (200 OK):**
 ```json
 {
   "name": "ESP32-001",
   "online": true,
-  "lastSeen": "2026-06-26T09:54:10.801Z",
+  "lastSeen": "2026-06-29T14:35:10.801Z",
   "deviceStatus": {
     "boiler": "on",
-    "floor_pump": "off",
-    "radiator_pump": "on",
-    "elec_boiler": "off"
+    "elec_boiler": "off",
+    "floor_pump": "on",
+    "radiator_pump": "on"
   },
   "uptime": 3600,
   "firmware": "1.0.0",
-  "lastSync": "2026-06-26T09:54:10.801Z"
+  "lastSync": "2026-06-29T14:35:10.801Z"
 }
 ```
 
@@ -589,9 +484,7 @@ Authorization: Bearer <token>
 
 ### POST /device/telemetry
 
-**Описание:** Отправить телеметрию от устройства (для ESP32)
-
-**Заголовки:** Не требуются (публичный эндпоинт)
+**Описание:** Отправить телеметрию от устройства
 
 **Тело запроса:**
 ```json
@@ -599,18 +492,8 @@ Authorization: Bearer <token>
   "serialNumber": "ESP32-001",
   "data": {
     "room_temp": 22.3,
-    "boiler_temp": 58.5,
-    "floor_temp": 24.8,
-    "outdoor_temp": -5.2,
-    "accumulator_temp": 65.0
+    "boiler_temp": 58.5
   }
-}
-```
-
-**Ответ (200 OK):**
-```json
-{
-  "success": true
 }
 ```
 
@@ -618,25 +501,13 @@ Authorization: Bearer <token>
 
 ### POST /device/command/:id/executed
 
-**Описание:** Подтвердить выполнение команды (для ESP32)
-
-**Заголовки:** Не требуются (публичный эндпоинт)
-
-**Параметры URL:**
-- `id` (number) - ID команды
+**Описание:** Подтвердить выполнение команды
 
 **Тело запроса:**
 ```json
 {
   "success": true,
   "message": "Command executed successfully"
-}
-```
-
-**Ответ (200 OK):**
-```json
-{
-  "success": true
 }
 ```
 
@@ -648,8 +519,6 @@ Authorization: Bearer <token>
 
 **Описание:** Полная синхронизация данных от ESP32
 
-**Заголовки:** Не требуются (публичный эндпоинт)
-
 **Тело запроса:**
 ```json
 {
@@ -659,23 +528,38 @@ Authorization: Bearer <token>
   "firmware": "1.0.0",
   "settings": {
     "room_temp_target": 22.0,
-    "boiler_temp_target": 60,
-    "floor_pump_on_temp": 25,
+    "room_temp_threshold_on": 21.5,
+    "room_temp_threshold_off": 22.5,
+    "boiler_temp_target": 60.0,
+    "boiler_temp_threshold_on": 55.0,
+    "boiler_temp_threshold_off": 65.0,
+    "floor_temp_target": 25.0,
+    "floor_temp_threshold_on": 24.0,
+    "floor_temp_threshold_off": 26.0,
+    "accumulator_temp_target": 65.0,
+    "accumulator_temp_threshold_on": 60.0,
+    "accumulator_temp_threshold_off": 70.0,
     "night_start": "22:00",
-    "night_end": "06:00"
+    "night_end": "06:00",
+    "manual_timeout": 30
   },
   "telemetry": {
     "room_temp": 22.3,
     "boiler_temp": 58.5,
     "floor_temp": 24.8,
-    "outdoor_temp": -5.2,
-    "accumulator_temp": 65.0
+    "accumulator_temp": 65.0,
+    "outdoor_temp": -5.2
   },
   "device_status": {
     "boiler": "on",
-    "floor_pump": "off",
-    "radiator_pump": "on",
-    "elec_boiler": "off"
+    "elec_boiler": "off",
+    "floor_pump": "on",
+    "radiator_pump": "on"
+  },
+  "phases": {
+    "L1": true,
+    "L2": true,
+    "L3": true
   },
   "events": [
     {
@@ -683,12 +567,6 @@ Authorization: Bearer <token>
       "timestamp": 1735000000,
       "type": "INFO",
       "message": "Boiler turned ON"
-    },
-    {
-      "id": 2,
-      "timestamp": 1734999500,
-      "type": "WARNING",
-      "message": "Outdoor temperature below -5°C"
     }
   ]
 }
@@ -717,16 +595,10 @@ Authorization: Bearer <token>
 
 ## 🔑 Аутентификация
 
-Все защищённые эндпоинты требуют заголовок `Authorization`:
-
+Все защищённые эндпоинты требуют заголовок:
 ```
 Authorization: Bearer <token>
 ```
-
-**Как получить токен:**
-1. Отправьте POST запрос на `/api/auth/login`
-2. Получите токен из ответа
-3. Используйте его в заголовке для всех последующих запросов
 
 **Срок действия токена:** 24 часа
 
@@ -736,69 +608,39 @@ Authorization: Bearer <token>
 
 | Код | Описание |
 |-----|----------|
-| 400 | Bad Request - неверный формат запроса |
+| 400 | Bad Request |
 | 401 | Unauthorized - токен отсутствует или невалиден |
 | 403 | Forbidden - недостаточно прав |
-| 404 | Not Found - ресурс не найден |
-| 500 | Internal Server Error - ошибка сервера |
-
-**Пример ошибки:**
-```json
-{
-  "error": "Access token required"
-}
-```
+| 404 | Not Found |
+| 500 | Internal Server Error |
 
 ---
 
-## 📝 Примеры использования
+##  Примеры использования
 
 ### PowerShell
 
 ```powershell
 # 1. Получить токен
-$loginResponse = Invoke-RestMethod -Uri "http://localhost:3000/api/auth/login" -Method POST -ContentType "application/json" -Body '{"username":"admin","password":"admin123"}'
-$token = $loginResponse.token
+$response = Invoke-RestMethod -Uri "http://localhost:3000/api/auth/login" `
+  -Method POST -ContentType "application/json" `
+  -Body '{"username":"admin","password":"admin123"}'
+$token = $response.token
 
 # 2. Получить настройки
 $headers = @{Authorization="Bearer $token"}
-$settings = Invoke-RestMethod -Uri "http://localhost:3000/api/settings" -Headers $headers
-$settings | ConvertTo-Json
+Invoke-RestMethod -Uri "http://localhost:3000/api/settings" -Headers $headers
 
 # 3. Изменить настройку
 $body = @{value="23.5"} | ConvertTo-Json
-Invoke-RestMethod -Uri "http://localhost:3000/api/settings/room_temp_target" -Method PUT -Headers $headers -ContentType "application/json" -Body $body
+Invoke-RestMethod -Uri "http://localhost:3000/api/settings/room_temp_target" `
+  -Method PUT -Headers $headers -ContentType "application/json" -Body $body
 
 # 4. Получить телеметрию
-$telemetry = Invoke-RestMethod -Uri "http://localhost:3000/api/telemetry/latest" -Headers $headers
-$telemetry | ConvertTo-Json
+Invoke-RestMethod -Uri "http://localhost:3000/api/telemetry/latest" -Headers $headers
 
 # 5. Получить события
-$events = Invoke-RestMethod -Uri "http://localhost:3000/api/events?limit=10" -Headers $headers
-$events | ConvertTo-Json
-```
-
-### cURL (Linux/Mac)
-
-```bash
-# 1. Получить токен
-TOKEN=$(curl -s -X POST http://localhost:3000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin123"}' | jq -r '.token')
-
-# 2. Получить настройки
-curl -X GET http://localhost:3000/api/settings \
-  -H "Authorization: Bearer $TOKEN"
-
-# 3. Изменить настройку
-curl -X PUT http://localhost:3000/api/settings/room_temp_target \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"value":"23.5"}'
-
-# 4. Получить телеметрию
-curl -X GET http://localhost:3000/api/telemetry/latest \
-  -H "Authorization: Bearer $TOKEN"
+Invoke-RestMethod -Uri "http://localhost:3000/api/events?limit=10" -Headers $headers
 ```
 
 ### JavaScript (Browser Console)
@@ -823,43 +665,33 @@ fetch('http://localhost:3000/api/settings', {
 .then(r => r.json())
 .then(data => console.log('Settings:', data));
 
-// 3. Изменить настройку
-fetch('http://localhost:3000/api/settings/room_temp_target', {
-  method: 'PUT',
-  headers: {
-    'Authorization': 'Bearer ' + window.token,
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({value: '23.5'})
+// 3. Получить телеметрию
+fetch('http://localhost:3000/api/telemetry/latest', {
+  headers: {'Authorization': 'Bearer ' + window.token}
 })
 .then(r => r.json())
-.then(data => console.log('Updated:', data));
+.then(data => console.log('Telemetry:', data));
 ```
 
 ---
 
 ## 🎯 Быстрая шпаргалка
 
-| Действие | Метод | URL | Тело |
-|----------|-------|-----|------|
-| Войти | POST | /auth/login | `{"username":"admin","password":"admin123"}` |
-| Получить настройки | GET | /settings | - |
-| Изменить настройку | PUT | /settings/:key | `{"value":"23.5"}` |
-| Получить телеметрию | GET | /telemetry/latest | - |
-| Получить события | GET | /events | - |
-| Получить пользователей | GET | /users | - |
-| Создать пользователя | POST | /users | `{"username":"...","password":"...","role":"..."}` |
-| Отправить команду | POST | /commands | `{"command":"boiler_on","payload":{}}` |
-| Статус устройства | GET | /device/status | - |
-| Синхронизация ESP32 | POST | /device/sync | (полный JSON) |
-
----
-
-## 📞 Поддержка
-
-**Документация:** Этот файл  
-**GitHub:** https://github.com/ETar74/heating-system  
-**Автор:** ETar74
+| Действие | Метод | URL |
+|----------|-------|-----|
+| Войти | POST | /auth/login |
+| Получить настройки | GET | /settings |
+| Изменить настройку | PUT | /settings/:key |
+| Получить телеметрию | GET | /telemetry/latest |
+| История телеметрии | GET | /telemetry/history?parameter=X&hours=24 |
+| Получить события | GET | /events |
+| Получить пользователей | GET | /users |
+| Создать пользователя | POST | /users |
+| Отправить команду | POST | /commands |
+| Очередь команд | GET | /commands/pending |
+| Статус устройства | GET | /device/status |
+| Синхронизация ESP32 | POST | /device/sync |
+| Подтвердить команду | POST | /device/command/:id/executed |
 
 ---
 
@@ -870,20 +702,11 @@ fetch('http://localhost:3000/api/settings/room_temp_target', {
 
 ## 🚀 Как использовать
 
-1. **Создайте файл** `API.md` в корне проекта
+1. **Создайте файл** `API.md` в корне проекта: `D:\KotelAI\heating-system\API.md`
 2. **Скопируйте содержимое** выше
-3. **Сохраните файл** (Ctrl+S)
+3. **Сохраните** (Ctrl+S)
 4. **Откройте в VS Code** — увидите красивое форматирование
-5. **Для предпросмотра** нажмите `Ctrl+Shift+V` в VS Code
+5. **Для предпросмотра** нажмите `Ctrl+Shift+V`
 
----
+Готово! У вас полная актуальная документация API. 🎯
 
-## ✅ Что вы получили
-
-Полный справочник по всем API вашей системы с:
-- 📋 Списком всех эндпоинтов
-- 📝 Примерами запросов и ответов
-- 🔑 Описанием аутентификации
-- 🚫 Коды ошибок
-- 💻 Примеры кода для PowerShell, cURL, JavaScript
-- 🎯 Быстрая шпаргалка

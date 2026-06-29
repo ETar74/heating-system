@@ -16,6 +16,17 @@ function Dashboard() {
     loadData();
     loadDeviceStatus();
     connectWebSocket();
+    
+    // Автоматическое обновление данных раз в минуту (резервный механизм)
+    const refreshInterval = setInterval(() => {
+      console.log('🔄 Автообновление данных (раз в минуту)');
+      loadData();
+      loadDeviceStatus();
+    }, 60000); // 60000 мс = 1 минута
+    
+    return () => {
+      clearInterval(refreshInterval);
+    };
   }, []);
 
   const loadData = async () => {
@@ -70,6 +81,8 @@ function Dashboard() {
     return data[key] ? data[key].value : '—';
   };
 
+
+
   // Проверка неисправных датчиков (температура <= -127)
   const faultySensors = Object.entries(data)
     .filter(([key, val]) => {
@@ -87,6 +100,34 @@ function Dashboard() {
       return names[key] || key;
     });
 
+  // Получить фазы
+  const getPhases = () => {
+    const phases = data.phases?.value;
+    if (!phases) return { L1: false, L2: false, L3: false };
+    return {
+      L1: phases.L1 || false,
+      L2: phases.L2 || false,
+      L3: phases.L3 || false
+    };
+  };
+
+  const phases = getPhases();
+  const phasesOk = phases.L1 && phases.L2 && phases.L3;
+  const phasesLost = [
+    !phases.L1 && 'L1',
+    !phases.L2 && 'L2',
+    !phases.L3 && 'L3'
+  ].filter(Boolean);
+
+  // Объединить все предупреждения
+  const allWarnings = [];
+  if (faultySensors.length > 0) {
+    allWarnings.push(`Неисправны датчики: ${faultySensors.join(', ')}`);
+  }
+  if (phasesLost.length > 0) {
+    allWarnings.push(`Потеря фаз: ${phasesLost.join(', ')}`);
+  }
+
   const openDetail = (paramKey) => {
     navigate(`/parameter/${paramKey}`);
   };
@@ -94,6 +135,15 @@ function Dashboard() {
   if (loading) {
     return <div className="loading">Загрузка...</div>;
   }
+
+  // Подготовка списка устройств для отображения
+  const deviceStatus = device.deviceStatus || {};
+  const deviceList = [
+    { key: 'boiler', label: '🔥 Насос ТТ котёла', status: deviceStatus.boiler },
+    { key: 'elec_boiler', label: '⚡ Электрокотёл', status: deviceStatus.elec_boiler },
+    { key: 'floor_pump', label: '💧 Насос тёплого пола', status: deviceStatus.floor_pump },
+    { key: 'radiator_pump', label: '💧 Насос радиаторов', status: deviceStatus.radiator_pump }
+  ];
 
   return (
     <div className="dashboard">
@@ -106,10 +156,15 @@ function Dashboard() {
       </div>
 
       
-      {/* ⚠️ Баннер неисправных датчиков */}
-      {faultySensors.length > 0 && (
-        <div className="sensor-warning-banner">
-          ⚠️ <strong>Внимание:</strong> Неисправны датчики: {faultySensors.join(', ')}
+      {/* ⚠️ Общий баннер всех предупреждений */}
+      {allWarnings.length > 0 && (
+        <div className="warning-banner">
+          ⚠️ <strong>Внимание:</strong>
+          <ul className="warning-list">
+            {allWarnings.map((warning, idx) => (
+              <li key={idx}>{warning}</li>
+            ))}
+          </ul>
         </div>
       )}
 
@@ -126,10 +181,27 @@ function Dashboard() {
           </div>
 
           <div className="card size-sm">
-            <div className="card-icon">🕐</div>
+            <div className="card-icon"></div>
             <div className="card-title">Последняя связь</div>
             <div className="card-value small">
               {formatLastSeen(device.lastSeen)}
+            </div>
+          </div>
+
+          {/* ⚡ Карточка фаз — всегда показывается */}
+          <div className={`card size-sm ${!phasesOk ? 'card-phases-error' : ''}`}>
+            <div className="card-icon">⚡</div>
+            <div className="card-title">Фазы</div>
+            <div className="phases-indicators">
+              <span className={`phase-indicator ${phases.L1 ? 'phase-ok' : 'phase-lost'}`}>
+                L1
+              </span>
+              <span className={`phase-indicator ${phases.L2 ? 'phase-ok' : 'phase-lost'}`}>
+                L2
+              </span>
+              <span className={`phase-indicator ${phases.L3 ? 'phase-ok' : 'phase-lost'}`}>
+                L3
+              </span>
             </div>
           </div>
         </div>
@@ -146,8 +218,6 @@ function Dashboard() {
               subtitle="(электрокотёл)"
               icon=""
               unit="°C"
-              min={40}
-              max={90}
               accentColor="#4facfe"
             />
           </div>
@@ -158,8 +228,6 @@ function Dashboard() {
               title="Котёл"
               icon="🔥"
               unit="°C"
-              min={20}
-              max={80}
               accentColor="#f5576c"
             />
           </div>
@@ -170,8 +238,6 @@ function Dashboard() {
               title="Тёплые полы"
               icon=""
               unit="°C"
-              min={15}
-              max={60}
               accentColor="#43e97b"
             />
           </div>
@@ -182,8 +248,6 @@ function Dashboard() {
               title="Помещение"
               icon=""
               unit="°C"
-              min={15}
-              max={30}
               accentColor="#667eea"
             />
           </div>
@@ -201,14 +265,22 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Режим работы — маленькая карточка (size-sm) */}
+      {/* Режим работы — статусы устройств */}
       <div className="section">
         <h2 className="section-title">⚙️ Режим работы</h2>
         <div className="cards-grid">
-          <div className="card size-sm clickable" onClick={() => openDetail('mode')}>
-            <div className="card-icon">⚙️</div>
-            <div className="card-title">Текущий режим</div>
-            <div className="card-value">{getValue('mode')}</div>
+          <div className="card size-lg">
+            <div className="card-title">Состояние устройств</div>
+            <div className="device-status-list">
+              {deviceList.map(d => (
+                <div key={d.key} className="device-status-item">
+                  <span className="device-name">{d.label}</span>
+                  <span className={`device-badge ${d.status === 'on' ? 'on' : 'off'}`}>
+                    {d.status === 'on' ? '🟢 ВКЛ' : '🔴 ВЫКЛ'}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

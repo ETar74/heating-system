@@ -23,7 +23,7 @@ function TempWidget({ paramKey, title, subtitle, icon, unit = '°C', min = 15, m
     try {
       const response = await api.get('/settings');
       console.log(`🔧 [${paramKey}] Response status:`, response.status);
-      console.log(`🔧 [${paramKey}] Response data:`, response.data);
+      console.log(` [${paramKey}] Response data:`, response.data);
       
       const params = response.data;
       
@@ -90,28 +90,64 @@ function TempWidget({ paramKey, title, subtitle, icon, unit = '°C', min = 15, m
     }
   };
 
+  // ===== ДИНАМИЧЕСКИЙ РАСЧЁТ ШКАЛЫ =====
+  
+  // Собрать все доступные значения
+  const availableValues = [
+    currentValue,
+    targetValue,
+    thresholdOn,
+    thresholdOff
+  ].filter(v => v !== null && v !== undefined && !isNaN(v));
+
+  // Вычислить динамическую шкалу
+  let scaleMin, scaleMax;
+
+  if (availableValues.length > 0) {
+    const minVal = Math.min(...availableValues);
+    const maxVal = Math.max(...availableValues);
+    const range = maxVal - minVal;
+    
+    // Дельта = 20% от диапазона
+    let delta = range * 0.2;
+    
+    // Если дельта слишком маленькая (< 1), установить минимум 1
+    if (delta < 1) {
+      delta = 1.5;
+    }
+    
+    scaleMin = minVal - delta;
+    scaleMax = maxVal + delta;
+    
+    console.log(`📊 [${paramKey}] Dynamic scale: min=${scaleMin.toFixed(1)}, max=${scaleMax.toFixed(1)}, delta=${delta.toFixed(1)}`);
+  } else {
+    // Дефолтный диапазон если нет данных
+    scaleMin = min;
+    scaleMax = max;
+    console.log(`📊 [${paramKey}] Using default scale: min=${scaleMin}, max=${scaleMax}`);
+  }
+
   // Вычисляем позиции в процентах
-  const range = max - min;
+  const range = scaleMax - scaleMin;
   const currentPos = currentValue !== null 
-    ? Math.max(0, Math.min(100, ((currentValue - min) / range) * 100)) 
+    ? Math.max(0, Math.min(100, ((currentValue - scaleMin) / range) * 100)) 
     : null;
   const targetPos = targetValue !== null 
-    ? ((targetValue - min) / range) * 100 
+    ? Math.max(0, Math.min(100, ((targetValue - scaleMin) / range) * 100)) 
     : null;
   const thresholdOnPos = thresholdOn !== null 
-    ? ((thresholdOn - min) / range) * 100 
+    ? Math.max(0, Math.min(100, ((thresholdOn - scaleMin) / range) * 100)) 
     : null;
   const thresholdOffPos = thresholdOff !== null 
-    ? ((thresholdOff - min) / range) * 100 
+    ? Math.max(0, Math.min(100, ((thresholdOff - scaleMin) / range) * 100)) 
     : null;
 
-  // Проверка неисправности датчика
+  // Цвет текущего значения
   const isSensorFaulty = currentValue !== null && currentValue <= -127;
 
-  // Цвет текущего значения
   const getValueColor = () => {
     if (currentValue === null) return '#95a5a6';
-    if (isSensorFaulty) return '#e74c3c'; // 🔴 Красный при неисправности
+    if (isSensorFaulty) return '#e74c3c';
     if (thresholdOn !== null && currentValue < thresholdOn) return '#3498db';
     if (thresholdOff !== null && currentValue > thresholdOff) return '#e74c3c';
     return '#27ae60';
@@ -185,7 +221,7 @@ function TempWidget({ paramKey, title, subtitle, icon, unit = '°C', min = 15, m
               title={`Вкл: ${thresholdOn}${unit}`}
             >
               <div className="widget-threshold-line" />
-              <div className="widget-threshold-label">{thresholdOn}</div>
+              <div className="widget-threshold-label">{thresholdOn.toFixed(1)}</div>
             </div>
           )}
 
@@ -197,7 +233,7 @@ function TempWidget({ paramKey, title, subtitle, icon, unit = '°C', min = 15, m
               title={`Выкл: ${thresholdOff}${unit}`}
             >
               <div className="widget-threshold-line" />
-              <div className="widget-threshold-label">{thresholdOff}</div>
+              <div className="widget-threshold-label">{thresholdOff.toFixed(1)}</div>
             </div>
           )}
 
@@ -228,9 +264,9 @@ function TempWidget({ paramKey, title, subtitle, icon, unit = '°C', min = 15, m
 
         {/* Мини-шкала */}
         <div className="widget-scale">
-          <span>{min}{unit}</span>
-          <span>{((min + max) / 2).toFixed(0)}{unit}</span>
-          <span>{max}{unit}</span>
+          <span>{Math.round(scaleMin)}</span>
+          <span>{Math.round((scaleMin + scaleMax) / 2)}</span>
+          <span>{Math.round(scaleMax)}</span>
         </div>
       </div>
 
@@ -239,15 +275,15 @@ function TempWidget({ paramKey, title, subtitle, icon, unit = '°C', min = 15, m
         <div className="widget-info">
           <div className="widget-info-item">
             <span className="widget-info-label">Вкл:</span>
-            <span className="widget-info-value" style={{ color: '#3498db' }}>{thresholdOn}{unit}</span>
+            <span className="widget-info-value" style={{ color: '#3498db' }}>{thresholdOn.toFixed(1)}{unit}</span>
           </div>
           <div className="widget-info-item">
             <span className="widget-info-label">Цель:</span>
-            <span className="widget-info-value" style={{ color: '#9b59b6' }}>{targetValue}{unit}</span>
+            <span className="widget-info-value" style={{ color: '#9b59b6' }}>{targetValue.toFixed(1)}{unit}</span>
           </div>
           <div className="widget-info-item">
             <span className="widget-info-label">Выкл:</span>
-            <span className="widget-info-value" style={{ color: '#e74c3c' }}>{thresholdOff}{unit}</span>
+            <span className="widget-info-value" style={{ color: '#e74c3c' }}>{thresholdOff.toFixed(1)}{unit}</span>
           </div>
         </div>
       )}

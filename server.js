@@ -258,6 +258,11 @@ app.get('/api/telemetry/latest', authenticateToken, async (req, res) => {
         latest[parameter] = { value, timestamp: cache.lastSync };
       }
       
+      // Добавить фазы
+      if (cache.phases) {
+        latest.phases = { value: cache.phases, timestamp: cache.lastSync };
+      }
+      
       console.log(`📊 Telemetry from cache:`, Object.keys(latest));
       return res.json(latest);
     }
@@ -268,15 +273,15 @@ app.get('/api/telemetry/latest', authenticateToken, async (req, res) => {
       take: 100
     });
 
-    const latest = {};
+    const latestFromDb = {};
     telemetry.forEach(t => {
-      if (!latest[t.parameter]) {
-        latest[t.parameter] = { value: t.value, timestamp: t.timestamp };
+      if (!latestFromDb[t.parameter]) {
+        latestFromDb[t.parameter] = { value: t.value, timestamp: t.timestamp };
       }
     });
 
-    console.log(`📊 Telemetry from DB:`, Object.keys(latest));
-    res.json(latest);
+    console.log(`📊 Telemetry from DB:`, Object.keys(latestFromDb));
+    res.json(latestFromDb);
   } catch (error) {
     console.error(`❌ Error in /api/telemetry/latest:`, error);
     res.status(500).json({ error: error.message });
@@ -609,6 +614,7 @@ app.post('/api/device/sync', async (req, res) => {
         settings: settings || undefined,
         telemetry: telemetry || undefined,
         deviceStatus: device_status || undefined,
+        phases: req.body.phases || undefined,
         lastSync: new Date(),
         uptime: uptime,
         firmware: firmware
@@ -618,6 +624,7 @@ app.post('/api/device/sync', async (req, res) => {
         settings: settings || {},
         telemetry: telemetry || {},
         deviceStatus: device_status || {},
+        phases: req.body.phases || {},
         lastSync: new Date(),
         uptime: uptime,
         firmware: firmware

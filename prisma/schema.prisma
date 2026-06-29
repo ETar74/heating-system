@@ -99,6 +99,7 @@ model DeviceCache {
   settings     Json?
   telemetry    Json?
   deviceStatus Json?    @map("device_status")
+  phases       Json?
   lastSync     DateTime @default(now()) @map("last_sync")
   uptime       Int?
   firmware     String?
