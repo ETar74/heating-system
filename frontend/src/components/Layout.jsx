@@ -34,14 +34,14 @@ function Layout({ user, onLogout }) {
               📋 События
             </Link>
           </li>
-            {user.role === 'ADMIN' && (
-              <li>
-                <Link to="/users" className={isActive('/users') ? 'active' : ''}>
-                  👥 Пользователи
-                </Link>
-              </li>
-            )}
-            </ul>
+          {user.role === 'ADMIN' && (
+            <li>
+              <Link to="/users" className={isActive('/users') ? 'active' : ''}>
+                👥 Пользователи
+              </Link>
+            </li>
+          )}
+        </ul>
         <button onClick={onLogout} className="logout-btn">
           🚪 Выйти
         </button>

@@ -117,7 +117,7 @@
   padding: 0 1rem;
   align-items: center;
   justify-content: space-between;
-  z-index: 100;
+  z-index: 1000;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
   border-bottom: 1px solid #e0ddd5;
 }
@@ -132,8 +132,9 @@
 .main-wrapper {
   flex: 1;
   min-width: 0;
-  /* ===== СДВИГ ВПРАВО (на ширину меню) ===== */
   margin-left: 250px;
+  position: relative;
+  overflow: hidden;
 }
 
 /* Минимальный отступ контента от меню (~0.7 см) */
@@ -158,10 +159,12 @@
   .main-wrapper {
     margin-left: 0;
     padding-top: 60px;
+    overflow: hidden;
   }
 
   .main-content {
     padding: 1rem;
+    overflow-x: hidden;
   }
 
   .mobile-menu-container {

@@ -9,8 +9,10 @@
   gap: 0.5rem;
   transition: transform 0.2s, box-shadow 0.2s;
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
 }
-
 .temp-widget:hover {
   transform: translateY(-3px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
@@ -61,6 +63,10 @@
   font-weight: 700;
   transition: color 0.3s;
   white-space: nowrap;
+}
+
+.widget-value span {
+  font-size: 1.2rem;
 }
 
 /* Трек */
@@ -130,7 +136,7 @@
 /* Цель */
 .widget-target {
   position: absolute;
-  top: -4px; /* Опустили на 2px ниже */
+  top: -4px;
   transform: translateX(-50%);
   z-index: 3;
 }
@@ -150,7 +156,7 @@
 /* Текущее значение */
 .widget-current {
   position: absolute;
-  top: -10px; /* Подняли на 2px выше */
+  top: -10px;
   transform: translateX(-50%);
   z-index: 4;
   transition: left 0.5s ease, background-color 0.3s;
@@ -158,7 +164,7 @@
 
 /* Чёрная вертикальная линия посередине */
 .widget-current-dot {
-  width: 8px; /* Сделали на 2px шире */
+  width: 8px;
   height: 16px;
   border-radius: 2px;
   background: inherit;
@@ -168,20 +174,18 @@
   transition: none;
 }
 
-/* Чёрная вертикальная линия посередине */
 .widget-current-dot::after {
   content: '';
   position: absolute;
   top: 2px;
   left: 50%;
   transform: translateX(-50%);
-  width: 1px; /* Сделали в 1px */
+  width: 1px;
   height: 12px;
   background: #000;
   border-radius: 1px;
 }
 
-/* Убираем hover-эффект, так как индикатор теперь маленький */
 .temp-widget:hover .widget-current-dot {
   transform: none;
 }
@@ -223,39 +227,6 @@
   color: #2c3e50;
 }
 
-/* Адаптивность */
-@media (max-width: 768px) {
-  .widget-value {
-    font-size: 1.2rem;
-  }
-
-  
-  .widget-current {
-    top: -9px; /* Подняли на 2px выше */
-  }
-
-  .widget-target {
-    top: -4px; /* Опустили на 2px ниже */
-  }
-
-  .widget-current-dot {
-    width: 6px; /* Сделали на 2px шире */
-    height: 14px;
-  }
-
-  .widget-current-dot::after {
-    top: 1px;
-    width: 1px; /* Полоска в 1px */
-    height: 10px;
-  }
-
-  .widget-threshold-line {
-    height: 13px;
-  }
-
-  .widget-target-line {
-    height: 17px;
-  }
 /* ===== ПРЕДУПРЕЖДЕНИЕ О НЕИСПРАВНОМ ДАТЧИКЕ ===== */
 .widget-warning {
   text-align: center;
@@ -275,8 +246,36 @@
   50% { opacity: 0.7; }
 }
 
-/* Ошибка в значении */
-.widget-value span {
-  font-size: 1.2rem;
-}
+/* ===== АДАПТИВНОСТЬ ===== */
+@media (max-width: 768px) {
+  .widget-value {
+    font-size: 1.2rem;
+  }
+
+  .widget-current {
+    top: -9px;
+  }
+
+  .widget-target {
+    top: -4px;
+  }
+
+  .widget-current-dot {
+    width: 6px;
+    height: 14px;
+  }
+
+  .widget-current-dot::after {
+    top: 1px;
+    width: 1px;
+    height: 10px;
+  }
+
+  .widget-threshold-line {
+    height: 13px;
+  }
+
+  .widget-target-line {
+    height: 17px;
+  }
 }

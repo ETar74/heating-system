@@ -376,4 +376,25 @@
   color: #721c24;
   border: 1px solid #f5c6cb;
 }
+/* Скрыть индикатор WebSocket на мобильных (он перекрывает меню) */
+.ws-status {
+  display: none;
+}
+  /* Уменьшить отступы виджетов на мобильных */
+  .temp-widget {
+    padding: 0.5rem 0.75rem;
+  }
+
+  /* Уменьшить высоту индикаторов */
+  .widget-current {
+    top: -6px;
+  }
+
+  .widget-threshold {
+    top: -2px;
+  }
+
+  .widget-target {
+    top: -2px;
+  }
 }

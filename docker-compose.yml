@@ -63,7 +63,19 @@ services:
       - heating_network
     depends_on:
       - backend
-
+  prisma-studio:
+    image: node:20-alpine
+    container_name: heating_prisma_studio
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    ports:
+      - "5555:5555"
+    command: sh -c "npm install && npx prisma studio --browser none"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/heating_system
+    depends_on:
+      - postgres
 volumes:
   postgres_data:
 

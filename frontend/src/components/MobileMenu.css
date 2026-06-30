@@ -1,7 +1,7 @@
+/* Контейнер мобильного меню */
 .mobile-menu-container {
-  display: none;
-  position: relative;
-  z-index: 1001;
+  display: flex;
+  align-items: center;
 }
 
 /* Гамбургер-кнопка */
