@@ -62,6 +62,37 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+// ============================================
+// ПРОВЕРКА ОНЛАЙН-СТАТУСА ESP32
+// ============================================
+
+// Проверка: ESP32 онлайн (последний sync менее 2 минут назад)
+const isDeviceOnline = async () => {
+  const cache = await prisma.deviceCache.findFirst({
+    orderBy: { lastSync: 'desc' }
+  });
+  
+  if (!cache || !cache.lastSync) return false;
+  
+  const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+  return cache.lastSync > twoMinutesAgo;
+};
+
+// Middleware: блокировка изменений настроек если ESP32 офлайн
+const requireDeviceOnline = async (req, res, next) => {
+  const online = await isDeviceOnline();
+  
+  if (!online) {
+    return res.status(423).json({ 
+      error: 'Device offline',
+      message: 'Изменение настроек заблокировано: устройство ESP32 недоступно. Дождитесь восстановления связи.'
+    });
+  }
+  
+  next();
+};
+
+
 const requireRole = (...roles) => {
   return (req, res, next) => {
     // Роль уже есть в req.user из JWT-токена
@@ -340,7 +371,31 @@ app.get('/api/settings', authenticateToken, async (req, res) => {
   }
 });
 
-app.put('/api/settings/:key', authenticateToken, requireRole('ADMIN', 'OPERATOR'), async (req, res) => {
+// ============================================
+// ПРОВЕРКА: МОЖНО ЛИ МЕНЯТЬ НАСТРОЙКИ
+// ============================================
+app.get('/api/settings/can-edit', authenticateToken, async (req, res) => {
+  try {
+    const online = await isDeviceOnline();
+    const cache = await prisma.deviceCache.findFirst({
+      orderBy: { lastSync: 'desc' }
+    });
+    
+    res.json({
+      canEdit: online,
+      deviceOnline: online,
+      lastSync: cache?.lastSync || null,
+      message: online 
+        ? 'Устройство подключено. Изменение настроек разрешено.' 
+        : 'Устройство недоступно. Изменение настроек заблокировано.'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+app.put('/api/settings/:key', authenticateToken, requireRole('ADMIN', 'OPERATOR'), requireDeviceOnline, async (req, res) => {
   try {
     const { key } = req.params;
     const { value } = req.body;
@@ -411,7 +466,7 @@ app.put('/api/settings/:key', authenticateToken, requireRole('ADMIN', 'OPERATOR'
   }
 });
 
-app.put('/api/settings', authenticateToken, requireRole('ADMIN', 'OPERATOR'), async (req, res) => {
+app.put('/api/settings', authenticateToken, requireRole('ADMIN', 'OPERATOR'), requireDeviceOnline, async (req, res) => {
   try {
     const { parameters } = req.body;
 
@@ -631,7 +686,35 @@ app.post('/api/device/sync', async (req, res) => {
       }
     });
     
-    // Также обновить статус устройства в таблице Device
+    // ============================================
+    // СОХРАНИТЬ НАСТРОЙКИ ИЗ ESP32 В ТАБЛИЦУ parameters
+    // ============================================
+    if (settings && typeof settings === 'object') {
+      for (const [key, value] of Object.entries(settings)) {
+        if (key && value !== undefined && value !== null) {
+          try {
+            await prisma.parameter.upsert({
+              where: { key },
+              update: { 
+                value: String(value),
+                updatedAt: new Date()
+              },
+              create: { 
+                key, 
+                value: String(value),
+                description: `Synced from ESP32`,
+                updatedAt: new Date()
+              }
+            });
+          } catch (err) {
+            console.error(`⚠️ Failed to save setting ${key}:`, err.message);
+          }
+        }
+      }
+      console.log(`💾 Saved ${Object.keys(settings).length} settings from ESP32 to DB`);
+    }
+
+   // Также обновить статус устройства в таблице Device
     const device = await prisma.device.findFirst({
       where: { serialNumber: deviceId }
     });

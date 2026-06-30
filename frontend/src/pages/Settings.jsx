@@ -9,13 +9,32 @@ function Settings() {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [editMode, setEditMode] = useState({});
   const [originalValues, setOriginalValues] = useState({});
-  
+  const [deviceOnline, setDeviceOnline] = useState(true);
+  const [lastSync, setLastSync] = useState(null);
+
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const canEdit = canEditSettings(user.role);
 
   useEffect(() => {
     loadSettings();
+    loadDeviceStatus();
+
+    // Проверять статус каждые 10 секунд
+    const statusInterval = setInterval(loadDeviceStatus, 10000);
+
+    return () => clearInterval(statusInterval);
   }, []);
+
+  const loadDeviceStatus = async () => {
+    try {
+      const response = await api.get('/settings/can-edit');
+      setDeviceOnline(response.data.canEdit);
+      setLastSync(response.data.lastSync);
+    } catch (error) {
+      console.error('Error loading device status:', error);
+      setDeviceOnline(false);
+    }
+  };
 
   const loadSettings = async () => {
     try {
@@ -43,17 +62,25 @@ function Settings() {
   };
 
   const startEdit = (key) => {
+    if (!deviceOnline) {
+      showMessage('error', 'Изменение настроек заблокировано: устройство ESP32 недоступно');
+      return;
+    }
     setEditMode(prev => ({ ...prev, [key]: true }));
   };
 
   const cancelEdit = (key) => {
-    setSettings(prev => prev.map(s => 
+    setSettings(prev => prev.map(s =>
       s.key === key ? { ...s, value: originalValues[key] } : s
     ));
     setEditMode(prev => ({ ...prev, [key]: false }));
   };
 
   const saveParam = async (key, value) => {
+    if (!deviceOnline) {
+      showMessage('error', 'Изменение настроек заблокировано: устройство ESP32 недоступно');
+      return;
+    }
     try {
       await api.put(`/settings/${key}`, { value });
       showMessage('success', 'Сохранено');
@@ -66,7 +93,7 @@ function Settings() {
   };
 
   const markAsEdited = (key, value) => {
-    setSettings(prev => prev.map(s => 
+    setSettings(prev => prev.map(s =>
       s.key === key ? { ...s, value: value } : s
     ));
   };
@@ -82,7 +109,7 @@ function Settings() {
       ]
     },
     {
-      name: '🔥 Котёл',
+      name: ' Котёл',
       description: 'Защита от перегрева (охлаждение)',
       params: [
         { key: 'boiler_temp_target', label: 'Целевая температура', unit: '°C', type: 'number', step: 1 },
@@ -125,8 +152,27 @@ function Settings() {
   return (
     <div className="settings-page">
       <div className="settings-header">
-        <h1>⚙️ Настройки системы</h1>
+        <h1>️ Настройки системы</h1>
+        <div className={`device-status-badge ${deviceOnline ? 'online' : 'offline'}`}>
+          {deviceOnline ? '🟢 ESP32 онлайн' : '🔴 ESP32 офлайн'}
+        </div>
       </div>
+
+      {/* Баннер блокировки при офлайн */}
+      {!deviceOnline && (
+        <div className="settings-lock-banner">
+          ⚠️ <strong>Изменение настроек заблокировано</strong>
+          <div className="lock-banner-text">
+            Устройство ESP32 недоступно.
+            {lastSync
+              ? ` Последняя связь: ${new Date(lastSync).toLocaleString('ru-RU')}`
+              : ' Связь не установлена.'}
+          </div>
+          <div className="lock-banner-hint">
+            Настройки будут разблокированы после восстановления связи с устройством.
+          </div>
+        </div>
+      )}
 
       {message.text && (
         <div className={`message ${message.type}`}>
@@ -157,14 +203,12 @@ function Settings() {
 
                   return (
                     <tr key={param.key}>
-                      {/* Колонка 1: Параметр */}
                       <td className="param-label">
                         <div className="param-name">{param.label}</div>
                       </td>
-                      
-                      {/* Колонка 2: Значение */}
+
                       <td className="param-value">
-                        {isEditing && canEdit ? (
+                        {isEditing && canEdit && deviceOnline ? (
                           <div className="param-edit-wrapper">
                             <input
                               type={param.type === 'time' ? 'time' : 'number'}
@@ -181,20 +225,19 @@ function Settings() {
                           </span>
                         )}
                       </td>
-                      
-                      {/* Колонка 3: Действия */}
+
                       <td className="param-actions">
-                        {canEdit ? (
+                        {canEdit && deviceOnline ? (
                           isEditing ? (
                             <div className="action-buttons">
-                              <button 
+                              <button
                                 className="btn-icon btn-save"
                                 onClick={() => saveParam(param.key, value)}
                                 title="Сохранить"
                               >
                                 💾
                               </button>
-                              <button 
+                              <button
                                 className="btn-icon btn-cancel"
                                 onClick={() => cancelEdit(param.key)}
                                 title="Отменить"
@@ -203,7 +246,7 @@ function Settings() {
                               </button>
                             </div>
                           ) : (
-                            <button 
+                            <button
                               className="btn-icon btn-edit"
                               onClick={() => startEdit(param.key)}
                               title="Редактировать"
@@ -211,6 +254,10 @@ function Settings() {
                               ✏️
                             </button>
                           )
+                        ) : !deviceOnline ? (
+                          <span className="locked-indicator" title="Заблокировано: устройство офлайн">
+                            🔒
+                          </span>
                         ) : (
                           <span style={{ color: '#95a5a6', fontSize: '0.8rem' }}>
                             Только просмотр

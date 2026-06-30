@@ -136,6 +136,27 @@ function Dashboard() {
     return <div className="loading">Загрузка...</div>;
   }
 
+  // Заглушка при полном отсутствии связи с ESP32
+  const noDeviceData = !device.online && !device.lastSeen;
+  
+  if (noDeviceData) {
+    return (
+      <div className="dashboard">
+        <div className="dashboard-header">
+          <h1>Главная панель</h1>
+        </div>
+        <div className="device-offline-stub">
+          <div className="stub-icon">📡</div>
+          <h2>Устройство не подключено</h2>
+          <p>ESP32 ещё не зарегистрирован в системе.</p>
+          <p className="stub-hint">
+            После первого подключения устройства здесь появятся данные телеметрии.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // Подготовка списка устройств для отображения
   const deviceStatus = device.deviceStatus || {};
   const deviceList = [
