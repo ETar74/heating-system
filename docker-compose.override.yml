@@ -1,20 +1,41 @@
-version: '3.8'
-
 services:
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: heating_pgadmin
+  postgres:
+    image: postgres:16-alpine
+    container_name: heating_postgres
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@heating.local
-      PGADMIN_DEFAULT_PASSWORD: admin123
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: heating_system
     ports:
-      - "5050:80"
-    depends_on:
-      - postgres
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
-      - heating-network
+      - heating-network  # ⬅️ Добавьте эту строку
 
-networks:
+  backend:
+    # ... существующий конфиг ...
+    networks:
+      - heating-network  # ⬅️ Добавьте эту строку
+
+  frontend:
+    # ... существующий конфиг ...
+    networks:
+      - heating-network  # ⬅️ Добавьте эту строку
+
+  pgadmin:
+    # ... конфиг из override ...
+    networks:
+      - heating-network  # ⬅️ Добавьте эту строку
+
+volumes:
+  postgres_data:
+
+networks:  # ⬅️ Добавьте этот блок в КОНЕЦ файла
   heating-network:
-    external: true
+    driver: bridge
