@@ -1,41 +1,27 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: heating_postgres
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: heating_system
-    ports:
-      - "5433:5432"
+  # Dev-инструменты (подхватываются автоматически вместе с основным compose)
+  prisma-studio:
+    image: node:20-alpine
+    container_name: heating_prisma_studio
+    working_dir: /app
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - heating-network  # ⬅️ Добавьте эту строку
-
-  backend:
-    # ... существующий конфиг ...
-    networks:
-      - heating-network  # ⬅️ Добавьте эту строку
-
-  frontend:
-    # ... существующий конфиг ...
-    networks:
-      - heating-network  # ⬅️ Добавьте эту строку
-
+      - .:/app
+      - /app/node_modules
+    ports:
+      - "5555:5555"
+    command: sh -c "npm install && npx prisma studio --browser none"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/heating_system
+    depends_on:
+      - postgres
   pgadmin:
-    # ... конфиг из override ...
-    networks:
-      - heating-network  # ⬅️ Добавьте эту строку
-
-volumes:
-  postgres_data:
-
-networks:  # ⬅️ Добавьте этот блок в КОНЕЦ файла
-  heating-network:
-    driver: bridge
+    image: dpage/pgadmin4:latest
+    container_name: heating_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@heating.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres

@@ -267,6 +267,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.5rem;
   padding: 0.4rem 0.6rem;
   background: #f8f9fa;
   border-radius: 6px;
@@ -302,6 +303,47 @@
   background: #f8d7da;
   color: #721c24;
   border: 1px solid #f5c6cb;
+}
+
+.device-badge {
+  margin-left: auto;
+}
+
+/* Кнопки управления устройствами (ADMIN/OPERATOR) */
+.device-toggle-btn {
+  padding: 0.25rem 0.7rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  min-width: 52px;
+}
+
+.device-toggle-btn.turn-on {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+}
+
+.device-toggle-btn.turn-on:hover:not(:disabled) {
+  background: #c8e6c9;
+}
+
+.device-toggle-btn.turn-off {
+  background: #ffebee;
+  color: #c62828;
+  border: 1px solid #ffcdd2;
+}
+
+.device-toggle-btn.turn-off:hover:not(:disabled) {
+  background: #ffcdd2;
+}
+
+.device-toggle-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
 
 /* ===== ЗАГЛУШКА ПРИ ОТСУТСТВИИ УСТРОЙСТВА ===== */

@@ -1,8 +1,12 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL 
-  ? `${import.meta.env.VITE_API_URL}/api` 
-  : 'http://localhost:3000/api';
+// Базовый URL API (без хвостового /api и /)
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/+$/, '');
+
+const API_URL = `${API_BASE}/api`;
+
+// Адрес WebSocket: тот же host/port, что и API (http → ws, https → wss)
+export const WS_URL = API_BASE.replace(/^http/, 'ws');
 
 const api = axios.create({
   baseURL: API_URL
@@ -20,11 +24,12 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response) {
-      // 401 - токен истёк или невалиден → выбрасываем на логин
+      // 401 - токен истёк или невалиден → мягкий логин:
+      // App.jsx поймает событие и перекинет на /login БЕЗ перезагрузки страницы
       if (error.response.status === 401) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        window.location.href = '/login';
+        window.dispatchEvent(new CustomEvent('auth:unauthorized'));
         return Promise.reject(error);
       }
       

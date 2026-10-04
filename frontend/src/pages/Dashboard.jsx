@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { telemetry } from '../api';
-import api from '../api';
+import { telemetry, commands } from '../api';
+import api, { WS_URL } from '../api';
 import './Dashboard.css';
 import TempWidget from '../components/TempWidget';
+import { canControlDevices } from '../utils/permissions';
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -11,22 +12,37 @@ function Dashboard() {
   const [device, setDevice] = useState({ online: false, name: 'Не настроено' });
   const [loading, setLoading] = useState(true);
   const [wsStatus, setWsStatus] = useState('disconnected');
+  const [pending, setPending] = useState({}); // { [command]: true } — команды в очереди
+
+  const wsRef = useRef(null);
+  const reconnectTimer = useRef(null);
+
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const canControl = canControlDevices(user.role);
 
   useEffect(() => {
     loadData();
     loadDeviceStatus();
     connectWebSocket();
-    
-    // Автоматическое обновление данных раз в минуту (резервный механизм)
+
+    // Резервное поллинговое обновление раз в минуту (основной источник — WebSocket)
     const refreshInterval = setInterval(() => {
-      console.log('🔄 Автообновление данных (раз в минуту)');
       loadData();
       loadDeviceStatus();
-    }, 60000); // 60000 мс = 1 минута
-    
+    }, 60000);
+
     return () => {
       clearInterval(refreshInterval);
+      // Корректно закрываем сокет и отменяем реконнект при размонтировании
+      if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
+      reconnectTimer.current = null;
+      if (wsRef.current) {
+        wsRef.current.onclose = null;
+        wsRef.current.close();
+        wsRef.current = null;
+      }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadData = async () => {
@@ -50,26 +66,69 @@ function Dashboard() {
   };
 
   const connectWebSocket = () => {
-    const ws = new WebSocket('ws://localhost:3000');
-    
+    const token = localStorage.getItem('token');
+    const ws = new WebSocket(`${WS_URL}/?token=${encodeURIComponent(token || '')}`);
+    wsRef.current = ws;
+
     ws.onopen = () => setWsStatus('connected');
 
     ws.onmessage = (event) => {
-      const msg = JSON.parse(event.data);
-      if (msg.type === 'telemetry_updated') {
-        setData(prev => ({ ...prev, ...msg.data }));
-      }
-      if (msg.type === 'device_status_updated') {
-        loadDeviceStatus();
+      try {
+        const msg = JSON.parse(event.data);
+
+        if (msg.type === 'telemetry_updated' && msg.data) {
+          setData(prev => ({ ...prev, ...msg.data }));
+        }
+
+        if (msg.type === 'device_sync') {
+          // Обновлённая телеметрия + статусы от устройства
+          if (msg.telemetry) {
+            const now = new Date().toISOString();
+            setData(prev => {
+              const next = { ...prev };
+              for (const [k, v] of Object.entries(msg.telemetry)) {
+                next[k] = { value: v, timestamp: now };
+              }
+              return next;
+            });
+          }
+          loadDeviceStatus();
+          setPending({});
+        }
+
+        if (msg.type === 'device_status_updated') {
+          loadDeviceStatus();
+          setPending({});
+        }
+      } catch (err) {
+        console.error('WS parse error:', err);
       }
     };
 
     ws.onclose = () => {
       setWsStatus('disconnected');
-      setTimeout(connectWebSocket, 5000);
+      // Не подключаемся повторно, если компонент уже размонтирован
+      if (wsRef.current === ws) {
+        reconnectTimer.current = setTimeout(connectWebSocket, 5000);
+      }
     };
 
-    return () => ws.close();
+    ws.onerror = () => {
+      ws.close();
+    };
+  };
+
+  const sendCommand = async (command) => {
+    try {
+      setPending(prev => ({ ...prev, [command]: true }));
+      await commands.send(command);
+    } catch (error) {
+      setPending(prev => {
+        const next = { ...prev };
+        delete next[command];
+        return next;
+      });
+    }
   };
 
   const formatLastSeen = (date) => {
@@ -157,13 +216,13 @@ function Dashboard() {
     );
   }
 
-  // Подготовка списка устройств для отображения
+  // Подготовка списка устройств для отображения (+ команды управления)
   const deviceStatus = device.deviceStatus || {};
   const deviceList = [
-    { key: 'boiler', label: '🔥 Насос ТТ котёла', status: deviceStatus.boiler },
-    { key: 'elec_boiler', label: '⚡ Электрокотёл', status: deviceStatus.elec_boiler },
-    { key: 'floor_pump', label: '💧 Насос тёплого пола', status: deviceStatus.floor_pump },
-    { key: 'radiator_pump', label: '💧 Насос радиаторов', status: deviceStatus.radiator_pump }
+    { key: 'boiler', label: '🔥 Насос ТТ котёла', status: deviceStatus.boiler, onCmd: 'boiler_on', offCmd: 'boiler_off' },
+    { key: 'elec_boiler', label: '⚡ Электрокотёл', status: deviceStatus.elec_boiler, onCmd: 'elec_boiler_on', offCmd: 'elec_boiler_off' },
+    { key: 'floor_pump', label: '💧 Насос тёплого пола', status: deviceStatus.floor_pump, onCmd: 'floor_pump_on', offCmd: 'floor_pump_off' },
+    { key: 'radiator_pump', label: '💧 Насос радиаторов', status: deviceStatus.radiator_pump, onCmd: 'radiator_pump_on', offCmd: 'radiator_pump_off' }
   ];
 
   return (
@@ -293,14 +352,28 @@ function Dashboard() {
           <div className="card size-lg">
             <div className="card-title">Состояние устройств</div>
             <div className="device-status-list">
-              {deviceList.map(d => (
-                <div key={d.key} className="device-status-item">
-                  <span className="device-name">{d.label}</span>
-                  <span className={`device-badge ${d.status === 'on' ? 'on' : 'off'}`}>
-                    {d.status === 'on' ? '🟢 ВКЛ' : '🔴 ВЫКЛ'}
-                  </span>
-                </div>
-              ))}
+              {deviceList.map(d => {
+                const isOn = d.status === 'on';
+                const cmd = isOn ? d.offCmd : d.onCmd;
+                return (
+                  <div key={d.key} className="device-status-item">
+                    <span className="device-name">{d.label}</span>
+                    <span className={`device-badge ${isOn ? 'on' : 'off'}`}>
+                      {isOn ? '🟢 ВКЛ' : '🔴 ВЫКЛ'}
+                    </span>
+                    {canControl && (
+                      <button
+                        className={`device-toggle-btn ${isOn ? 'turn-off' : 'turn-on'}`}
+                        disabled={!!pending[cmd]}
+                        onClick={() => sendCommand(cmd)}
+                        title={isOn ? 'Выключить' : 'Включить'}
+                      >
+                        {pending[cmd] ? '⏳' : (isOn ? 'Выкл' : 'Вкл')}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

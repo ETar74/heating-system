@@ -1,0 +1,84 @@
+.custom-tooltip {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 200px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.tooltip-time {
+  font-size: 14px;
+  font-weight: 700;
+  color: #2c3e50;
+  margin: 0 0 8px 0;
+  text-align: center;
+}
+
+.tooltip-divider {
+  height: 1px;
+  background: #e0e0e0;
+  margin: 8px 0;
+}
+
+.tooltip-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+  font-size: 13px;
+}
+
+.tooltip-color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tooltip-label {
+  font-weight: 500;
+  color: #34495e;
+  flex: 1;
+}
+
+.tooltip-value {
+  font-weight: 700;
+  color: #2c3e50;
+  font-size: 14px;
+}
+
+.tooltip-target {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 4px 0;
+  padding: 6px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.tooltip-target-value {
+  font-weight: 600;
+  color: #27ae60;
+  margin-left: auto;
+}
+
+.tooltip-diff {
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-left: 4px;
+}
+
+.tooltip-diff.diff-small {
+  color: #27ae60;
+  background: rgba(39, 174, 96, 0.1);
+}
+
+.tooltip-diff.diff-large {
+  color: #e74c3c;
+  background: rgba(231, 76, 60, 0.1);
+}

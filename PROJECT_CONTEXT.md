@@ -26,9 +26,14 @@
 
 ### Структура папок
 heating-system/
-├── backend/
-│ └── src/
-│ └── server.js ← ГЛАВНЫЙ ФАЙЛ (всё в одном: API, WebSocket, Telegram-бот)
+├── server.js ← Entry point: Express + WebSocket + сборка маршрутов
+├── src/
+│ ├── middleware/ ← auth (JWT/роли), deviceAuth (ESP32), rateLimit
+│ ├── routes/ ← auth, users, telemetry, settings, events, commands, device, ota
+│ ├── lib/ ← constants, settingsSchema (валидация), alarms, online
+│ └── bot.js ← Telegram-бот
+│
+├── scripts/ ← dev-утилиты (check_keys.js, monitor.ps1, test-sync.json)
 │
 ├── frontend/
 │ └── src/

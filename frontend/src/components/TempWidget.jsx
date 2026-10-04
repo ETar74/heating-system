@@ -14,76 +14,47 @@ function TempWidget({ paramKey, title, subtitle, icon, unit = '°C', min = 15, m
     loadSettings();
     loadCurrentValue();
     
-    const interval = setInterval(loadCurrentValue, 5000);
+    const interval = setInterval(loadCurrentValue, 30000); // каждые 30 секунд
     return () => clearInterval(interval);
   }, [paramKey]);
 
   const loadSettings = async () => {
-    console.log(`🔧 [${paramKey}] Loading settings...`);
     try {
       const response = await api.get('/settings');
-      console.log(`🔧 [${paramKey}] Response status:`, response.status);
-      console.log(` [${paramKey}] Response data:`, response.data);
-      
       const params = response.data;
-      
+
       if (!Array.isArray(params)) {
-        console.error(`❌ [${paramKey}] Settings is not an array:`, params);
         setError('Неверный формат настроек');
         return;
       }
-      
+
       const target = params.find(p => p.key === `${paramKey}_target`);
       const on = params.find(p => p.key === `${paramKey}_threshold_on`);
       const off = params.find(p => p.key === `${paramKey}_threshold_off`);
-      
-      console.log(`🔧 [${paramKey}] Found target:`, target);
-      console.log(`🔧 [${paramKey}] Found threshold_on:`, on);
-      console.log(`🔧 [${paramKey}] Found threshold_off:`, off);
-      
+
       if (target) setTargetValue(parseFloat(target.value));
       if (on) setThresholdOn(parseFloat(on.value));
       if (off) setThresholdOff(parseFloat(off.value));
     } catch (error) {
-      console.error(`❌ [${paramKey}] Error loading settings:`, error);
-      console.error(`❌ [${paramKey}] Error response:`, error.response);
-      console.error(`❌ [${paramKey}] Error status:`, error.response?.status);
-      console.error(`❌ [${paramKey}] Error data:`, error.response?.data);
       setError(`Ошибка: ${error.response?.status || error.message}`);
     }
   };
 
   const loadCurrentValue = async () => {
-    console.log(`🔧 [${paramKey}] Loading current value...`);
     try {
       const response = await api.get('/telemetry/latest');
-      console.log(`🔧 [${paramKey}] Telemetry response status:`, response.status);
-      console.log(`🔧 [${paramKey}] Telemetry response data:`, response.data);
-      
       const data = response.data;
-      
+
       if (!data || typeof data !== 'object') {
-        console.warn(`⚠️ [${paramKey}] Invalid telemetry data:`, data);
         return;
       }
-      
-      console.log(`🔧 [${paramKey}] Looking for key:`, paramKey);
-      console.log(`🔧 [${paramKey}] Found value:`, data[paramKey]);
-      
+
       if (data[paramKey]) {
         const value = parseFloat(data[paramKey].value);
-        console.log(`✅ [${paramKey}] Current value:`, value);
         setCurrentValue(value);
         setError(null);
-      } else {
-        console.warn(`⚠️ [${paramKey}] No data found for key:`, paramKey);
-        console.warn(`⚠️ [${paramKey}] Available keys:`, Object.keys(data));
       }
     } catch (error) {
-      console.error(`❌ [${paramKey}] Error loading current value:`, error);
-      console.error(`❌ [${paramKey}] Error response:`, error.response);
-      console.error(`❌ [${paramKey}] Error status:`, error.response?.status);
-      console.error(`❌ [${paramKey}] Error data:`, error.response?.data);
       setError(`Ошибка: ${error.response?.status || error.message}`);
     } finally {
       setLoading(false);

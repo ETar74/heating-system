@@ -17,6 +17,10 @@ model User {
   updatedAt    DateTime @updatedAt @map("updated_at")
   role         Role     @relation(fields: [roleId], references: [id])
 
+  // 👇 ДОБАВЛЕНО: Связи с таблицей прошивок
+  uploadedFirmware   Firmware[] @relation("FirmwareUploader")
+  approvedFirmware   Firmware[] @relation("FirmwareApprover")
+
   @@map("users")
 }
 
@@ -92,7 +96,6 @@ model Command {
   @@map("commands")
 }
 
-// Кэш последних данных от ESP32 (источник истины для UI)
 model DeviceCache {
   id           Int      @id @default(autoincrement())
   deviceId     String   @unique @map("device_id")
@@ -104,19 +107,31 @@ model DeviceCache {
   uptime       Int?
   firmware     String?
   
+  // 👇 ДОБАВЛЕНО: Поля для отслеживания статуса обновления прошивки
+  firmwareVersion          String?
+  firmwareUpdatePending    Boolean @default(false)
+  firmwareUpdateApproved   Boolean @default(false)
+
+  // ID последнего обработанного события ESP32 (deduplication при повторных sync)
+  lastEventId              Int?    @map("last_event_id")
+
   @@map("device_cache")
 }
 
-// События, пришедшие с ESP32 (история)
-model DeviceEvent {
-  id        Int      @id @default(autoincrement())
-  deviceId  String   @map("device_id")
-  eventId   Int      @map("event_id")
-  timestamp DateTime
-  type      String
-  message   String
-  createdAt DateTime @default(now()) @map("created_at")
+model Firmware {
+  id            Int      @id @default(autoincrement())
+  version       String   @unique
+  filename      String
+  filesize      Int
+  md5           String
+  uploadedBy    Int
+  uploadedAt    DateTime @default(now())
+  approved      Boolean  @default(false)
+  approvedAt    DateTime?
+  approvedBy    Int?
   
-  @@index([deviceId, eventId], name: "device_event_unique")
-  @@map("device_events")
+  uploader      User     @relation("FirmwareUploader", fields: [uploadedBy], references: [id])
+  approver      User?    @relation("FirmwareApprover", fields: [approvedBy], references: [id])
+  
+  @@map("firmware")
 }

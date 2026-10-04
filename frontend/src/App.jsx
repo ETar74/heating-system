@@ -18,6 +18,17 @@ function App() {
     checkAuth();
   }, []);
 
+  // Мягкий выход при 401 (истёк токен): без перезагрузки страницы
+  useEffect(() => {
+    const onUnauthorized = () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setUser(null);
+    };
+    window.addEventListener('auth:unauthorized', onUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', onUnauthorized);
+  }, []);
+
   const checkAuth = async () => {
     const token = localStorage.getItem('token');
     if (!token) {

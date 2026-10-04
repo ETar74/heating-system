@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { users } from '../api';
+import { useState, useEffect, Fragment } from 'react';
+import api, { users } from '../api';
 import './Users.css';
 
 function Users() {
@@ -7,6 +7,8 @@ function Users() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [bindFor, setBindFor] = useState(null); // id пользователя, к которому привязываем Telegram
+  const [bindCode, setBindCode] = useState('');
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -54,6 +56,22 @@ function Users() {
   const cancelEdit = () => {
     setEditingUser(null);
     setFormData({ username: '', password: '', role: 'VIEWER', telegramId: '' });
+  };
+
+  const startBind = (user) => {
+    setBindFor(user.id);
+    setBindCode('');
+  };
+
+  const handleBind = async (user) => {
+    try {
+      const response = await api.post(`/users/${user.id}/bind`, { code: bindCode.trim() });
+      alert(`✅ Telegram привязан (ID: ${response.data.telegramId})`);
+      setBindFor(null);
+      loadUsers();
+    } catch (error) {
+      alert('Ошибка привязки: ' + (error.response?.data?.error || error.message));
+    }
   };
 
   const handleUpdate = async (e) => {
@@ -199,33 +217,66 @@ function Users() {
           </thead>
           <tbody>
             {userList.map(user => (
-              <tr key={user.id}>
-                <td>{user.id}</td>
-                <td>{user.username}</td>
-                <td>
-                  <span className={`role-badge role-${user.role.toLowerCase()}`}>
-                    {user.role}
-                  </span>
-                </td>
-                <td>{user.telegramId || '-'}</td>
-                <td>{new Date(user.createdAt).toLocaleDateString('ru-RU')}</td>
-                <td className="action-buttons-cell">
-                  <button 
-                    className="edit-btn"
-                    onClick={() => startEdit(user)}
-                    title="Редактировать"
-                  >
-                    ✏️
-                  </button>
-                  <button 
-                    className="delete-btn"
-                    onClick={() => handleDelete(user.id, user.username)}
-                    title="Удалить"
-                  >
-                    🗑️
-                  </button>
-                </td>
-              </tr>
+              <Fragment key={user.id}>
+                <tr>
+                  <td>{user.id}</td>
+                  <td>{user.username}</td>
+                  <td>
+                    <span className={`role-badge role-${user.role.toLowerCase()}`}>
+                      {user.role}
+                    </span>
+                  </td>
+                  <td>{user.telegramId || '-'}</td>
+                  <td>{new Date(user.createdAt).toLocaleDateString('ru-RU')}</td>
+                  <td className="action-buttons-cell">
+                    <button
+                      className="bind-btn"
+                      onClick={() => startBind(user)}
+                      title="Привязать Telegram (код из /bind в боте)"
+                    >
+                      📱
+                    </button>
+                    <button
+                      className="edit-btn"
+                      onClick={() => startEdit(user)}
+                      title="Редактировать"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      className="delete-btn"
+                      onClick={() => handleDelete(user.id, user.username)}
+                      title="Удалить"
+                    >
+                      🗑️
+                    </button>
+                  </td>
+                </tr>
+                {bindFor === user.id && (
+                  <tr className="bind-row-tr">
+                    <td colSpan={6}>
+                      <div className="bind-row">
+                        <span className="bind-label">
+                          Код из команды /bind в Telegram:
+                        </span>
+                        <input
+                          value={bindCode}
+                          onChange={(e) => setBindCode(e.target.value.toUpperCase())}
+                          placeholder="ABC123"
+                          maxLength={6}
+                          autoFocus
+                        />
+                        <button className="btn-save" onClick={() => handleBind(user)}>
+                          Привязать
+                        </button>
+                        <button className="btn-cancel" onClick={() => setBindFor(null)}>
+                          Отмена
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             ))}
           </tbody>
         </table>
@@ -258,7 +309,27 @@ function Users() {
               </div>
             </div>
 
+            {bindFor === user.id && (
+              <div className="bind-row mobile-bind">
+                <span className="bind-label">Код из /bind:</span>
+                <input
+                  value={bindCode}
+                  onChange={(e) => setBindCode(e.target.value.toUpperCase())}
+                  placeholder="ABC123"
+                  maxLength={6}
+                />
+                <button className="btn-save" onClick={() => handleBind(user)}>Привязать</button>
+                <button className="btn-cancel" onClick={() => setBindFor(null)}>✕</button>
+              </div>
+            )}
+
             <div className="user-card-footer">
+              <button
+                className="bind-btn"
+                onClick={() => startBind(user)}
+              >
+                📱 Привязать
+              </button>
               <button 
                 className="edit-btn"
                 onClick={() => startEdit(user)}

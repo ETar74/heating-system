@@ -1,5 +1,5 @@
 @echo off
-cd /d D:\KotelAI\heating-system
+cd /d "%~dp0"
 timeout /t 30 /nobreak >nul
-docker-compose up -d
+docker compose up -d
 exit

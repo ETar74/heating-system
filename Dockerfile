@@ -19,5 +19,5 @@ RUN npx prisma generate
 # Открываем порт 3000
 EXPOSE 3000
 
-# Команда запуска
-CMD ["npm", "run", "dev"]
+# Команда запуска (prod: без nodemon; dev-режим — через command в docker-compose)
+CMD ["npm", "start"]

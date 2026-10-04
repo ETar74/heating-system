@@ -7,4 +7,7 @@ README.md
 .vscode
 .idea
 docker-compose.yml
+docker-compose.override.yml
 Dockerfile
+uploads
+*.log

@@ -348,3 +348,45 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== ПРИВЯЗКА TELEGRAM ===== */
+.bind-btn {
+  background: #3498db;
+  color: white;
+}
+
+.bind-btn:hover {
+  background: #2980b9;
+}
+
+.bind-row-tr td {
+  background: #f5f8fc;
+  padding: 0.5rem 1rem;
+}
+
+.bind-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.bind-label {
+  font-size: 0.875rem;
+  color: #546e7a;
+}
+
+.bind-row input {
+  width: 120px;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #cfd8dc;
+  border-radius: 5px;
+  font-size: 1rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.mobile-bind {
+  padding: 0.5rem 0.75rem;
+  background: #f5f8fc;
+}
