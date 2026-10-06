@@ -8,7 +8,9 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      # Из .env: POSTGRES_PASSWORD (дефолт "postgres"). Сильный пароль
+      # (openssl rand -base64 24) задаётся ДО первого создания тома.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: heating_system
     ports:
       - "5433:5432"
@@ -32,8 +34,9 @@ services:
     # JWT_SECRET, ESP32_TOKEN, CORS_ORIGINS и т.д. — из .env (см. README)
     env_file: .env
     environment:
-      # Внутри docker host — не localhost, а сервис postgres
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/heating_system?schema=public
+      # Внутри docker host — не localhost, а сервис postgres.
+      # POSTGRES_PASSWORD — то же значение, что у сервиса postgres (из .env).
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/heating_system?schema=public
       PORT: 3000
     ports:
       - "3000:3000"

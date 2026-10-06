@@ -255,6 +255,109 @@ sudo docker compose logs -f heating_backend   # без ошибок Prisma
 - [ ] ESP32 синкается (логи backend, данные в UI)
 - [ ] `sudo docker compose logs heating_backend` — без ошибок Prisma
 
+## ☁️ Деплой в облачный VPS (dev / backup-сервер)
+
+Альтернатива SBC: **система живёт на небольшом облачном VPS с почасовой тарификацией** —
+для разработки, тестов и как резервный сервер, пока не пришло «железо» Orange Pi.
+Весь state — в одной БД PostgreSQL, поэтому «перестал использовать» = удалить VPS
+и поднять новый за ~5 минут из образа + последнего бэкапа.
+
+### Выбор VPS
+
+| Параметр | Рекомендация |
+|---|---|
+| ОС | **Ubuntu 24.04 LTS** x86_64 (cloud-образ; подойдёт и Debian 12) |
+| vCPU | 2 |
+| RAM | 2–4 ГБ |
+| Диск | 20–40 ГБ NVMe/SSD |
+| Сеть | 100+ Мбит/с, ≥500 ГБ трафика, публичный IPv4 |
+| Регион | ближайшее ЦОД (восток → Токио/Сингапур, центр → Мск/Германия/Финляндия) |
+
+Провайдеры с почасовой (pay-as-you-go) тарификацией:
+
+| Провайдер | Биллинг | Оплата из РФ | Замечание |
+|---|---|---|---|
+| **Hetzner Cloud** | почасовой | только иностр. карта/PayPal | самый дешёвый (~€3–4/мес, 2 vCPU/4 ГБ/40 ГБ) |
+| **Vultr** | почасовой | крипто (USDT/BTC), карты, PayPal | лучший вариант при оплате криптой |
+| **DigitalOcean** | посекундный | иностр. карты | самый точный «по часам» |
+| **UpCloud** | по минутам | иностр. карты | запасной вариант |
+| **VPS.EE / Virt-Zone / Timeweb Cloud** | почасовой + пауза без списаний | российские карты / СБП | «выключил — не плачу»; ЦОД в Мск/СПб |
+
+> ⚠️ У Hetzner/Vultr/DO/UpCloud **остановленный** инстанс продолжает тарифицироваться —
+> режим «платить, только пока работаю» = удалить и воссоздать из образа + бэкап БД (~5 мин).
+> У RU/BY-провайдеров VPS можно ставить на паузу без списаний.
+
+**Выбор по умолчанию (рекомендация):**
+- Оплата российской картой/СБП → **Virt-Zone VPS** (почасовая тарификация, ЦОД Мск/СПб,
+  ближайший к устройству и пользователю): план ~**2 vCPU / 4 ГБ / 40 ГБ NVMe** (или ближайший),
+  Ubuntu 24.04 LTS, ориентир ~300–800 ₽/мес (сверить с калькулятором).
+  Альтернатива: **Timeweb Cloud** (посекундная тарификация) или **VPS.EE**
+  (режим «пауза без списаний» — VPS можно заморозить и не платить).
+- Оплата криптой → **Vultr** (2 vCPU/2 ГБ, Токио/Сингапур, ~$48/мес).
+- Иностранная карта/PayPal → **Hetzner Cloud CX22** (2 vCPU/4 ГБ/40 ГБ, ~€4.5/мес, ЦОД Хельсинки).
+
+### Шаг 1. VPS
+
+1. Создать VPS (таблица выше): **Ubuntu 24.04 LTS**, 2 vCPU / 2–4 ГБ / 20–40 ГБ NVMe.
+2. По первому подключению (SSH-ключ) инициализировать систему:
+   ```bash
+   git clone https://github.com/ETar74/heating-system.git /opt/heating-system
+   cd /opt/heating-system
+   sudo chmod +x scripts/setup-cloud.sh
+   sudo ./scripts/setup-cloud.sh            # опц.: --user server --tz Asia/Novosibirsk
+   ```
+   Скрипт (идемпотентный) поставит Docker + Compose, UFW (откроет **SSH/3000/5173**,
+   закроет **5433**), fail2ban, автообновления — и добавит вашего пользователя в группу docker.
+
+### Шаг 2. Приложение
+
+```bash
+cd /opt/heating-system
+cp .env.cloud .env
+nano .env        # JWT_SECRET (openssl rand -base64 48), ESP32_TOKEN, публичный IP
+docker compose up -d --build
+```
+
+Проверки:
+```bash
+curl http://<публичный-IP>:3000/health     # -> {"status":"ok","db":true}
+# UI: http://<публичный-IP>:5173 (admin / admin123 → сменить пароль)
+docker compose logs -f heating_backend     # без ошибок Prisma
+```
+
+Отличия от деплоя на SBC:
+- **`ESP32_ALLOWED_IPS` не задаётся** — в облаке устройство приходит с разных IP
+  (домашняя/мобильная сеть), аутентификация только по `ESP32_TOKEN`;
+- в прошивке устройства URL → `http://<публичный-IP>:3000`;
+- порт **5433 (postgres) не публикуется в интернет** — UFW закрывает его явно;
+- при первом запуске задайте в `.env` `POSTGRES_PASSWORD`
+  (`openssl rand -base64 24`) — его читает `docker-compose.yml`;
+- ⚠️ трафик UI/ESP32 ↔ VPS идёт по простому HTTP. Для постоянного публичного
+  доступа добавьте домен + HTTPS (Caddy/Let's Encrypt) или используйте Tailscale
+  (как в разделе SBC).
+
+### Шаг 3. Бэкап
+
+```bash
+mkdir -p /var/backups/heating
+crontab -e
+30 3 * * * BACKUP_DIR=/var/backups/heating /opt/heating-system/scripts/backup-db.sh >> /var/backups/heating/backup.log 2>&1
+```
+
+Дампы периодически копируйте на свой ПК (`scp`, WebDAV/Яндекс.Диск) — это страховка.
+
+Восстановление на новом VPS: создать VPS → `scripts/setup-cloud.sh` → `git clone` →
+`cp .env.cloud .env` → `docker compose up -d` →
+```bash
+gunzip -c heating_system-YYYYMMDD-HHMMSS.sql.gz | docker exec -i heating_postgres psql -U postgres heating_system
+```
+
+### Стоимость (ориентир, сверять с калькулятором провайдера)
+
+- В 24/7-режиме: Hetzner ~€4/мес (~350 ₽) · Vultr ~$48/мес · DigitalOcean ~$24–48/мес ·
+  VPS.EE/Virt-Zone/Timeweb ~300–800 ₽/мес.
+- В «почасовом» режиме стоимость пропорциональна времени работы VPS.
+
 ## 🔐 Безопасность
 
 - RBAC: ADMIN / OPERATOR / VIEWER (JWT, 24 ч).
@@ -269,3 +372,6 @@ sudo docker compose logs -f heating_backend   # без ошибок Prisma
 - `API.md` — описание API
 - `PROJECT_CONTEXT.md` — контекст и матрица прав
 - `scripts/test-sync.json` — пример синка ESP32
+- `scripts/setup-cloud.sh` — инициализация облачного VPS (см. «Деплой в облачный VPS»)
+- `scripts/backup-db.sh` — бэкап БД (SBC и облако)
+- `.env.prod` / `.env.cloud` — шаблоны `.env` для SBC и облака
