@@ -25,3 +25,5 @@ services:
       - "5050:80"
     depends_on:
       - postgres
+    networks:
+      - heating_network

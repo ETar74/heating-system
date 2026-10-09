@@ -13,7 +13,7 @@
 #define FIRMWARE_VERSION "1.0.0"
 // Токен устройства — ДОЛЖЕН совпадать с ESP32_TOKEN в .env на сервере.
 // Сгенерировать на сервере: openssl rand -hex 32
-#define DEVICE_TOKEN "ВАШ_ТОКЕН_ЗДЕСЬ"
+#define DEVICE_TOKEN "3KBHDITsBwedBfxkzmNVb4J5zJWcaYycI/2XS/Ius/4="
 
 // ===== Пины =====
 #define PIN_ONE_WIRE       4
