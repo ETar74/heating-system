@@ -19,7 +19,7 @@ function Settings() {
     loadSettings();
     loadDeviceStatus();
 
-    // Проверять статус каждые 10 секунд
+    //    10 
     const statusInterval = setInterval(loadDeviceStatus, 10000);
 
     return () => clearInterval(statusInterval);
@@ -45,7 +45,7 @@ function Settings() {
       setOriginalValues(orig);
     } catch (error) {
       console.error('Error loading settings:', error);
-      showMessage('error', 'Ошибка загрузки настроек');
+      showMessage('error', '  ');
     } finally {
       setLoading(false);
     }
@@ -63,7 +63,7 @@ function Settings() {
 
   const startEdit = (key) => {
     if (!deviceOnline) {
-      showMessage('error', 'Изменение настроек заблокировано: устройство ESP32 недоступно');
+      showMessage('error', '  :  ESP32 ');
       return;
     }
     setEditMode(prev => ({ ...prev, [key]: true }));
@@ -78,17 +78,17 @@ function Settings() {
 
   const saveParam = async (key, value) => {
     if (!deviceOnline) {
-      showMessage('error', 'Изменение настроек заблокировано: устройство ESP32 недоступно');
+      showMessage('error', '  :  ESP32 ');
       return;
     }
     try {
       await api.put(`/settings/${key}`, { value });
-      showMessage('success', 'Сохранено');
+      showMessage('success', '');
       setEditMode(prev => ({ ...prev, [key]: false }));
       setOriginalValues(prev => ({ ...prev, [key]: value }));
     } catch (error) {
       console.error('Error saving setting:', error);
-      showMessage('error', 'Ошибка сохранения');
+      showMessage('error', ' ');
     }
   };
 
@@ -99,77 +99,73 @@ function Settings() {
   };
 
   const groups = [
-    {
-      name: '🏠 Помещение',
-      description: 'Контроль температуры в доме',
-      params: [
-        { key: 'room_temp_target', label: 'Целевая температура', unit: '°C', type: 'number', step: 0.5 },
-        { key: 'room_temp_threshold_on', label: 'Порог включения', unit: '°C', type: 'number', step: 0.5 },
-        { key: 'room_temp_threshold_off', label: 'Порог выключения', unit: '°C', type: 'number', step: 0.5 },
-      ]
-    },
-    {
-      name: ' Котёл',
-      description: 'Защита от перегрева (охлаждение)',
-      params: [
-        { key: 'boiler_temp_target', label: 'Целевая температура', unit: '°C', type: 'number', step: 1 },
-        { key: 'boiler_temp_threshold_on', label: 'Порог включения', unit: '°C', type: 'number', step: 1 },
-        { key: 'boiler_temp_threshold_off', label: 'Порог выключения', unit: '°C', type: 'number', step: 1 },
-      ]
-    },
-    {
-      name: '💧 Тёплые полы',
-      description: 'Температура тёплых полов',
-      params: [
-        { key: 'floor_temp_target', label: 'Целевая температура', unit: '°C', type: 'number', step: 1 },
-        { key: 'floor_temp_threshold_on', label: 'Порог включения', unit: '°C', type: 'number', step: 1 },
-        { key: 'floor_temp_threshold_off', label: 'Порог выключения', unit: '°C', type: 'number', step: 1 },
-      ]
-    },
-    {
-      name: '🔋 Теплоаккумулятор (электрокотёл)',
-      description: 'Температура воды в теплоаккумуляторе',
-      params: [
-        { key: 'accumulator_temp_target', label: 'Целевая температура', unit: '°C', type: 'number', step: 1 },
-        { key: 'accumulator_temp_threshold_on', label: 'Порог включения', unit: '°C', type: 'number', step: 1 },
-        { key: 'accumulator_temp_threshold_off', label: 'Порог выключения', unit: '°C', type: 'number', step: 1 },
-      ]
-    },
-    {
-      name: '🌙 Режимы',
-      description: 'Ночной и дневной режимы',
-      params: [
-        { key: 'night_start', label: 'Ночной режим начало', unit: '', type: 'time' },
-        { key: 'night_end', label: 'Ночной режим конец', unit: '', type: 'time' },
-      ]
-    },
-  ];
+  {
+    name: '🏠 Помещение',
+    description: 'Контроль температуры в доме. Целевая температура рассчитывается как среднее значение порога включения и выключения',
+    params: [
+      { key: 'room_temp_threshold_on', label: 'Порог включения', unit: '°C', type: 'number', step: 0.5 },
+      { key: 'room_temp_threshold_off', label: 'Порог выключения', unit: '°C', type: 'number', step: 0.5 },
+    ]
+  },
+  {
+    name: ' Котёл',
+    description: 'Защита от перегрева (охлаждение). Целевая температура рассчитывается как среднее значение порога включения и выключения',
+    params: [
+      { key: 'boiler_temp_threshold_on', label: 'Порог включения', unit: '°C', type: 'number', step: 1 },
+      { key: 'boiler_temp_threshold_off', label: 'Порог выключения', unit: '°C', type: 'number', step: 1 },
+    ]
+  },
+  {
+    name: '💧 Тёплые полы',
+    description: 'Температура тёплых полов. Целевая температура рассчитывается как среднее значение порога включения и выключения',
+    params: [
+      { key: 'floor_temp_threshold_on', label: 'Порог включения', unit: '°C', type: 'number', step: 1 },
+      { key: 'floor_temp_threshold_off', label: 'Порог выключения', unit: '°C', type: 'number', step: 1 },
+    ]
+  },
+  {
+    name: '🔋 Теплоаккумулятор (электрокотёл)',
+    description: 'Температура воды в теплоаккумуляторе. Целевая температура рассчитывается как среднее значение порога включения и выключения',
+    params: [
+      { key: 'accumulator_temp_threshold_on', label: 'Порог включения', unit: '°C', type: 'number', step: 1 },
+      { key: 'accumulator_temp_threshold_off', label: 'Порог выключения', unit: '°C', type: 'number', step: 1 },
+    ]
+  },
+  {
+    name: '🌙 Режимы',
+    description: 'Ночной и дневной режимы',
+    params: [
+      { key: 'night_start', label: 'Ночной режим начало', unit: '', type: 'time' },
+      { key: 'night_end', label: 'Ночной режим конец', unit: '', type: 'time' },
+    ]
+  }
+];
 
   if (loading) {
-    return <div className="settings-page">Загрузка...</div>;
+    return <div className="settings-page">...</div>;
   }
 
   return (
     <div className="settings-page">
       <div className="settings-header">
-        <h1>️ Настройки системы</h1>
+        <h1>Настройки</h1>
         <div className={`device-status-badge ${deviceOnline ? 'online' : 'offline'}`}>
-          {deviceOnline ? '🟢 ESP32 онлайн' : '🔴 ESP32 офлайн'}
+          {deviceOnline ? 'ESP32 онлайн' : 'ESP32 оффлайн'}
         </div>
       </div>
 
-      {/* Баннер блокировки при офлайн */}
+      {/*     */}
       {!deviceOnline && (
         <div className="settings-lock-banner">
-          ⚠️ <strong>Изменение настроек заблокировано</strong>
+          🔒 <strong>Настройки заблокированы</strong>
           <div className="lock-banner-text">
-            Устройство ESP32 недоступно.
+             ESP32 .
             {lastSync
-              ? ` Последняя связь: ${new Date(lastSync).toLocaleString('ru-RU')}`
-              : ' Связь не установлена.'}
+              ? `  : ${new Date(lastSync).toLocaleString('ru-RU')}`
+              : '   .'}
           </div>
           <div className="lock-banner-hint">
-            Настройки будут разблокированы после восстановления связи с устройством.
+                   .
           </div>
         </div>
       )}
@@ -191,9 +187,9 @@ function Settings() {
             <table className="settings-table">
               <thead>
                 <tr>
-                  <th>Параметр</th>
-                  <th>Значение</th>
-                  <th>Действия</th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -221,7 +217,7 @@ function Settings() {
                           </div>
                         ) : (
                           <span className="param-display">
-                            {value || '—'}{param.unit ? ` ${param.unit}` : ''}
+                            {value || ''}{param.unit ? ` ${param.unit}` : ''}
                           </span>
                         )}
                       </td>
@@ -233,34 +229,30 @@ function Settings() {
                               <button
                                 className="btn-icon btn-save"
                                 onClick={() => saveParam(param.key, value)}
-                                title="Сохранить"
+                                title=""
                               >
-                                💾
-                              </button>
+                                💾                              </button>
                               <button
                                 className="btn-icon btn-cancel"
                                 onClick={() => cancelEdit(param.key)}
-                                title="Отменить"
+                                title=""
                               >
-                                ❌
-                              </button>
+                                ❌                              </button>
                             </div>
                           ) : (
                             <button
                               className="btn-icon btn-edit"
                               onClick={() => startEdit(param.key)}
-                              title="Редактировать"
+                              title=""
                             >
-                              ✏️
-                            </button>
+                              ✏️                            </button>
                           )
                         ) : !deviceOnline ? (
-                          <span className="locked-indicator" title="Заблокировано: устройство офлайн">
-                            🔒
-                          </span>
+                          <span className="locked-indicator" title=":  ">
+                            🔒                          </span>
                         ) : (
                           <span style={{ color: '#95a5a6', fontSize: '0.8rem' }}>
-                            Только просмотр
+                             
                           </span>
                         )}
                       </td>
@@ -277,3 +269,8 @@ function Settings() {
 }
 
 export default Settings;
+
+
+
+
+

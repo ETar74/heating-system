@@ -4,22 +4,14 @@ const prisma = new PrismaClient();
 
 // Ключи, которые ищет фронтенд (из Settings.jsx)
 const frontendKeys = [
-  'room_temp_target',
   'room_temp_threshold_on',
   'room_temp_threshold_off',
-  'room_temp_hysteresis',
-  'boiler_temp_target',
   'boiler_temp_threshold_on',
   'boiler_temp_threshold_off',
-  'boiler_temp_hysteresis',
-  'floor_temp_target',
   'floor_temp_threshold_on',
   'floor_temp_threshold_off',
-  'floor_temp_hysteresis',
-  'accumulator_temp_target',
   'accumulator_temp_threshold_on',
   'accumulator_temp_threshold_off',
-  'accumulator_temp_hysteresis',
   'night_start',
   'night_end',
   'manual_timeout'

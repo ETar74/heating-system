@@ -96,7 +96,7 @@ void taskControl(void *parameter) {
                     updated = true;
                     Serial.printf("[TaskControl] ✅ Boiler threshold OFF: %.1f°C\n", value);
                 }
-                else if (key == "boiler_temp_target" || key == "boiler_temp_hysteresis") {
+                else if (key == "boiler_temp_target") {
                     Serial.printf("[TaskControl] ℹ️ Key '%s' received but not used by ESP32\n", key.c_str());
                     updated = true;
                 }
@@ -112,7 +112,7 @@ void taskControl(void *parameter) {
                     updated = true;
                     Serial.printf("[TaskControl] ✅ Floor threshold OFF: %.1f°C\n", value);
                 }
-                else if (key == "floor_temp_target" || key == "floor_temp_hysteresis") {
+                else if (key == "floor_temp_target") {
                     Serial.printf("[TaskControl] ℹ️ Key '%s' received but not used by ESP32\n", key.c_str());
                     updated = true;
                 }
@@ -128,7 +128,7 @@ void taskControl(void *parameter) {
                     updated = true;
                     Serial.printf("[TaskControl] ✅ Room threshold OFF: %.1f°C\n", value);
                 }
-                else if (key == "room_temp_target" || key == "room_temp_hysteresis") {
+                else if (key == "room_temp_target") {
                     Serial.printf("[TaskControl] ℹ️ Key '%s' received but not used by ESP32\n", key.c_str());
                     updated = true;
                 }
@@ -144,7 +144,7 @@ void taskControl(void *parameter) {
                     updated = true;
                     Serial.printf("[TaskControl] ✅ Accumulator threshold OFF: %.1f°C\n", value);
                 }
-                else if (key == "accumulator_temp_target" || key == "accumulator_temp_hysteresis") {
+                else if (key == "accumulator_temp_target") {
                     Serial.printf("[TaskControl] ℹ️ Key '%s' received but not used by ESP32\n", key.c_str());
                     updated = true;
                 }

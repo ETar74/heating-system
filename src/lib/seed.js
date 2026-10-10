@@ -1,4 +1,4 @@
-// src/lib/seed.js
+﻿// src/lib/seed.js
 // Инициализация БД: роли, дефолтный админ, дефолтные настройки, устройство.
 
 async function initializeDatabase(prisma) {
@@ -33,22 +33,18 @@ async function initializeDatabase(prisma) {
       { key: 'room_temp_target', value: '22.0', description: 'Целевая температура помещения' },
       { key: 'room_temp_threshold_on', value: '21.5', description: 'Порог включения отопления' },
       { key: 'room_temp_threshold_off', value: '22.5', description: 'Порог выключения отопления' },
-      { key: 'room_temp_hysteresis', value: '0.5', description: 'Гистерезис: помещение' },
 
       { key: 'boiler_temp_target', value: '60.0', description: 'Целевая температура котла' },
       { key: 'boiler_temp_threshold_on', value: '55.0', description: 'Порог включения котла' },
       { key: 'boiler_temp_threshold_off', value: '65.0', description: 'Порог выключения котла' },
-      { key: 'boiler_temp_hysteresis', value: '3.0', description: 'Гистерезис: котёл' },
 
       { key: 'floor_temp_target', value: '25.0', description: 'Целевая температура тёплого пола' },
       { key: 'floor_temp_threshold_on', value: '24.0', description: 'Порог включения насоса ТП' },
       { key: 'floor_temp_threshold_off', value: '26.0', description: 'Порог выключения насоса ТП' },
-      { key: 'floor_temp_hysteresis', value: '1.0', description: 'Гистерезис: тёплый пол' },
 
       { key: 'accumulator_temp_target', value: '65.0', description: 'Целевая температура ТА' },
       { key: 'accumulator_temp_threshold_on', value: '60.0', description: 'Порог включения ЭК' },
       { key: 'accumulator_temp_threshold_off', value: '70.0', description: 'Порог выключения ЭК' },
-      { key: 'accumulator_temp_hysteresis', value: '3.0', description: 'Гистерезис: теплоаккумулятор' },
 
       { key: 'night_start', value: '22:00', description: 'Начало ночного режима' },
       { key: 'night_end', value: '06:00', description: 'Конец ночного режима' },

@@ -1,0 +1,16 @@
+        <h1>?  </h1>
+        <div className={`device-status-badge ${deviceOnline ? 'online' : 'offline'}`}>
+          {deviceOnline ? 'ESP32 онлайн' : 'ESP32 оффлайн'}
+        </div>
+      </div>
+
+      {/*     */}
+      {!deviceOnline && (
+        <div className="settings-lock-banner">
+          ?? <strong>Настройки заблокированы</strong>
+          <div className="lock-banner-text">
+             ESP32 .
+            {lastSync
+              ? `  : ${new Date(lastSync).toLocaleString('ru-RU')}`
+              : '   .'}
+          </div>

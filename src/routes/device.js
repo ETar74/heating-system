@@ -212,12 +212,7 @@ module.exports = function createDeviceRoutes({ prisma, broadcast, authenticateDe
         orderBy: { createdAt: 'asc' },
       });
 
-      if (commands.length > 0) {
-        await prisma.command.updateMany({
-          where: { id: { in: commands.map((c) => c.id) } },
-          data: { status: 'sent' },
-        });
-      }
+      // Do not change status here; ESP32 will fetch pending commands and confirm execution.
 
       // 7. Отправить обновление через WebSocket клиентам
       broadcast({
