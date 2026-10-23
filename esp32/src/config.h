@@ -11,8 +11,8 @@
 #define WIFI_SSID "Redmi123"
 #define WIFI_PASSWORD "qwerty123456"
 // IP облачного сервера (TimeWeb). Для локальной отладки укажите IP вашего ПК, например "192.168.1.10"
-//#define SERVER_HOST "129.101.119.233"
-#define SERVER_HOST "192.168.43.27"
+#define SERVER_HOST "129.101.119.233" // FIX-2026-10-23: TimeWeb сервер (замена с локального 192.168.43.27)
+//#define SERVER_HOST "192.168.43.27"
 #define SERVER_PORT 3000
 #define DEVICE_ID "ESP32-001"
 #define FIRMWARE_VERSION "1.0.0"

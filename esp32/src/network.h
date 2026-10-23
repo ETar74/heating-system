@@ -13,7 +13,7 @@
 //#define DEVICE_TOKEN        "YOUR_DEVICE_TOKEN_HERE"
 //#define WIFI_SSID           "YOUR_WIFI_SSID"
 //#define WIFI_PASSWORD       "YOUR_WIFI_PASSWORD"
-#define SERVER_HOST         "192.168.43.27"
+#define SERVER_HOST         "129.101.119.233" // FIX-2026-10-23: TimeWeb сервер
 //#define SERVER_PORT         "3000"
 //#define FIRMWARE_VERSION    "0.0.1"
 
