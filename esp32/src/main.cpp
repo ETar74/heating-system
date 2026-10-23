@@ -6,7 +6,8 @@
 #include "network.h"
 #include "nextion.h"
 #include "timekeeper.h"
-#include <freertos/semphr.h> // Добавляем заголовок для FreeRTOS семафоров
+#include <freertos/semphr.h> // Добавляем заголовок для FreeRTOS 
+#include "ws_client.h"
 
 void taskControl(void *parameter);
 void taskSensor(void *parameter);
@@ -60,10 +61,12 @@ void setup() {
                             TASK_NETWORK_PRIORITY, &taskNetworkHandle, 0);
 
     Serial.println("[Main] All tasks created. System started!\n");
+    wsClient.begin(SERVER_HOST, SERVER_PORT, "/", DEVICE_TOKEN);
 }
 
 void loop() {
     vTaskDelay(1000 / portTICK_PERIOD_MS);
+    wsClient.loop();
 }
 
 void taskControl(void *parameter) {
@@ -178,6 +181,12 @@ void taskControl(void *parameter) {
                     storage.saveSettings(control.settings);
                     control.clearAllManualOverrides();
                     network.acknowledgeCommand(cmd.id, true, "Setting updated");
+
+                    // FIX-2026-10-20: Обновляем экран Nextion, если он открыт на настройках
+                    if (nextion.currentPage == 2) {
+                        nextion.resetCache();
+                    }
+
                     Serial.printf("[TaskControl] ✅ Setting '%s' updated to %f\n", cmd.payloadKey.c_str(), cmd.payloadValue);
                     
                     // 🚀 ФОРСИРОВАННЫЙ SYNC: отправим новые настройки на сервер через 5 секунд
@@ -216,6 +225,51 @@ void taskControl(void *parameter) {
             }
             
             // ===== АВАРИЙНАЯ ОСТАНОВКА =====
+
+            // ===== GET_SCHEDULE =====
+            else if (cmd.type == "GET_SCHEDULE") {
+                Serial.println("[TaskControl] Schedule request processed");
+                network.lastHeartbeat -= 55000;
+                network.acknowledgeCommand(cmd.id, true, "Schedule request processed");
+            }
+
+            // ===== SET_SCHEDULE =====
+            else if (cmd.type == "SET_SCHEDULE") {
+                JsonDocument doc;
+                DeserializationError err = deserializeJson(doc, cmd.payloadString);
+                if (!err && doc["deviceId"].is<int>()) {
+                    int devId = doc["deviceId"].as<int>();
+                    if (devId >= 0 && devId < DEVICE_COUNT) {
+                        if (doc["slots"].is<JsonArray>() && doc["slots"].size() == 4) {
+                            xSemaphoreTake(settingsMtx, portMAX_DELAY);
+                            for (int s = 0; s < 4; s++) {
+                                JsonObject slotObj = doc["slots"][s].as<JsonObject>();
+                                DeviceSchedule &sched = control.settings.schedule[devId];
+                                sched.slots[s].startH = slotObj["startH"] | 0;
+                                sched.slots[s].startM = slotObj["startM"] | 0;
+                                sched.slots[s].endH = slotObj["endH"] | 0;
+                                sched.slots[s].endM = slotObj["endM"] | 0;
+                                sched.slots[s].enabled = slotObj["enabled"] | false;
+                            }
+                            storage.saveSettings(control.settings);
+                            xSemaphoreGive(settingsMtx);
+                            Serial.printf("[TaskControl] Schedule saved for device #%d\n", devId);
+                            network.acknowledgeCommand(cmd.id, true, "Schedule saved");
+
+                            // FIX-2026-10-20: Обновляем экран Nextion, если открыто расписание того же устройства
+                            if (nextion.currentPage == 7 && nextion.scheduleDevice == devId) {
+                                nextion.resetCache();
+                            }
+                        } else {
+                            network.acknowledgeCommand(cmd.id, false, "Invalid slots");
+                        }
+                    } else {
+                        network.acknowledgeCommand(cmd.id, false, "Invalid deviceId");
+                    }
+                } else {
+                    network.acknowledgeCommand(cmd.id, false, "Parse error");
+                }
+            }
             else if (cmd.type == "EMERGENCY_STOP") {
                 control.emergencyStop();
                 Serial.println("[TaskControl] 🚨 EMERGENCY STOP activated from server!");
@@ -301,19 +355,31 @@ void taskNetwork(void *parameter) {
 void taskNextion(void *parameter) {
     Serial.println("[TaskNextion] Started");
     for (;;) {
+        // 🛑 МОНИТОРИНГ СТЕКА: показываем свободное место раз в 60 секунд
+        static unsigned long lastStackCheck = 0;
+        if (millis() - lastStackCheck > 60000) {
+            lastStackCheck = millis();
+            UBaseType_t stackFree = uxTaskGetStackHighWaterMark(NULL);
+            Serial.printf("[TaskNextion] Stack free: %u bytes\n", stackFree);
+        }
+        
         nextion.update();
 
         while (nextion.hasCommand()) {
-            String rawCmd = nextion.getCommand();
-            String cmd = "";
-            for (int i = 0; i < rawCmd.length(); i++) {
-                char c = rawCmd.charAt(i);
-                if (c >= 32 && c <= 126) cmd += c;
+            // 1. Получаем команду (она уже очищена от мусора и 0xFF внутри getCommand)
+            String cmd = nextion.getCommand();
+            
+            // 2. Убираем случайные пробелы или невидимые символы с краев
+            cmd.trim();
+            
+            // 3. Если команда пустая, ПРЕРЫВАЕМ цикл (break), а не продолжаем (continue)!
+            if (cmd.length() == 0) {
+                break; 
             }
-            if (cmd.length() == 0) continue;
-            Serial.printf("[TaskNextion] Command: '%s'\n", cmd.c_str());
 
-            // === Страницы ===
+            Serial.printf("[TaskNextion] Executing: '%s'\n", cmd.c_str());
+
+            // === Страницы (дисплей сам сообщает о переходах) ===
             if (cmd == "pg0") { nextion.setPage(0); }
             else if (cmd == "pg1") { nextion.setPage(1); }
             else if (cmd == "pg2") { nextion.setPage(2); }
@@ -322,6 +388,10 @@ void taskNextion(void *parameter) {
             else if (cmd == "pg5") { nextion.setPage(5); }
             else if (cmd == "pg6") { nextion.setPage(6); }
             else if (cmd == "pg7") { nextion.setPage(7); }
+            else if (cmd == "pg8") { nextion.setPage(8); }
+            else if (cmd == "sch_save") {
+                // Save handled below after sch_chk/sch_edit
+            }
 
             // === Ручное управление ===
             else if (cmd == "manual_boiler_on")  control.setManualOverride(DEV_BOILER, true);
@@ -330,8 +400,10 @@ void taskNextion(void *parameter) {
             else if (cmd == "manual_elec_off")   control.setManualOverride(DEV_ELEC_BOILER, false);
             else if (cmd == "manual_floor_on")   control.setManualOverride(DEV_FLOOR_PUMP, true);
             else if (cmd == "manual_floor_off")  control.setManualOverride(DEV_FLOOR_PUMP, false);
-            else if (cmd == "manual_room_on"     || cmd == "manual_radiator_on"  || cmd == "manual_rad_on")  control.setManualOverride(DEV_RADIATOR_PUMP, true);
-            else if (cmd == "manual_room_off"    || cmd == "manual_radiator_off" || cmd == "manual_rad_off") control.setManualOverride(DEV_RADIATOR_PUMP, false);
+            else if (cmd == "manual_room_on" || cmd == "manual_radiator_on" || cmd == "manual_rad_on")  
+                control.setManualOverride(DEV_RADIATOR_PUMP, true);
+            else if (cmd == "manual_room_off" || cmd == "manual_radiator_off" || cmd == "manual_rad_off") 
+                control.setManualOverride(DEV_RADIATOR_PUMP, false);
             else if (cmd == "emergency_stop")    control.emergencyStop();
 
             // === Калибровка датчиков ===
@@ -339,6 +411,15 @@ void taskNextion(void *parameter) {
             else if (cmd == "cal_save")  { sensors.saveAllAddresses(); }
             else if (cmd.startsWith("cal_inc_")) { sensors.cycleRoleBusIndex((uint8_t)cmd.substring(8).toInt(), +1); }
             else if (cmd.startsWith("cal_dec_")) { sensors.cycleRoleBusIndex((uint8_t)cmd.substring(8).toInt(), -1); }
+            else if (cmd == "calibrate") { sensors.startCalibration(); }
+            else if (cmd.startsWith("assign ")) {
+                int firstSpace = cmd.indexOf(' ', 7);
+                if (firstSpace > 0) {
+                    int role = cmd.substring(7, firstSpace).toInt();
+                    int idx  = cmd.substring(firstSpace + 1).toInt();
+                    sensors.assignSensorToRole(role, idx);
+                }
+            }
 
             // === Настройки +/− ===
             else if (cmd == "inc_bon") { control.settings.boiler_threshold_on  += 0.5; }
@@ -360,7 +441,7 @@ void taskNextion(void *parameter) {
             else if (cmd == "dec_aof") { control.settings.TA_target_off        -= 0.5; }
             else if (cmd == "dec_tm")  { control.settings.manual_timeout       -= 5;   }
 
-           else if (cmd == "save_set") {
+            else if (cmd == "save_set") {
                 if (control.settings.boiler_threshold_on  < 5.0)  control.settings.boiler_threshold_on  = 5.0;
                 if (control.settings.boiler_threshold_on  > 95.0) control.settings.boiler_threshold_on  = 95.0;
                 if (control.settings.boiler_threshold_off < 5.0)  control.settings.boiler_threshold_off = 5.0;
@@ -379,11 +460,11 @@ void taskNextion(void *parameter) {
                 if (control.settings.TA_target_off        > 95.0) control.settings.TA_target_off        = 95.0;
                 if (control.settings.manual_timeout       < 10)   control.settings.manual_timeout       = 10;
                 if (control.settings.manual_timeout       > 300)  control.settings.manual_timeout       = 300;
+                
                 storage.saveSettings(control.settings);
                 control.clearAllManualOverrides();
                 Serial.println("[TaskNextion] Settings saved to NVS");
                 
-                // 🚀 ФОРСИРОВАННЫЙ SYNC: следующий heartbeat произойдёт через 5 секунд
                 network.lastHeartbeat -= 55000;
                 Serial.println("[TaskNextion] 🚀 Forced sync triggered (next heartbeat in 5s)");
             }
@@ -403,47 +484,46 @@ void taskNextion(void *parameter) {
             else if (cmd == "time_save")     { Serial.println("[TaskNextion] Time saved"); }
 
             // === Расписание (Page 7) ===
-            else if (cmd == "sch_dev_0") { nextion.scheduleDevice = 0; }
-            else if (cmd == "sch_dev_1") { nextion.scheduleDevice = 1; }
-            else if (cmd == "sch_dev_2") { nextion.scheduleDevice = 2; }
-            else if (cmd == "sch_dev_3") { nextion.scheduleDevice = 3; }
+            else if (cmd == "sch_dev_0") { 
+                nextion.scheduleDevice = 0; 
+                Serial.println("[Nextion] ✅ Switched to Device 0 (TT)");
+            }
+            else if (cmd == "sch_dev_1") { 
+                nextion.scheduleDevice = 1; 
+                Serial.println("[Nextion] ✅ Switched to Device 1 (EK)");
+            }
+            else if (cmd == "sch_dev_2") { 
+                nextion.scheduleDevice = 2; 
+                Serial.println("[Nextion] ✅ Switched to Device 2 (TP)");
+            }
+            else if (cmd == "sch_dev_3") { 
+                nextion.scheduleDevice = 3; 
+                Serial.println("[Nextion] ✅ Switched to Device 3 (RD)");
+            }
 
             else if (cmd.startsWith("sch_chk_")) {
                 int slot = cmd.substring(8).toInt();
                 control.toggleSlotEnabled(nextion.scheduleDevice, slot);
-                storage.saveSettings(control.settings);
             }
             else if (cmd.startsWith("sch_edit_")) {
                 int slot = cmd.substring(9).toInt();
                 nextion.showKeypad(nextion.scheduleDevice, slot, "ЧЧ:ММ-ЧЧ:ММ");
             }
 
-            // 🆕 Сохранение расписания (аналогично cal_save)
-            else if (cmd == "sch_save") {
-                storage.saveSettings(control.settings);
-                Serial.println("[TaskNextion] ✅ Schedule saved to NVS");
-            }
-
             // === Клавиатура (Page 8) ===
             else if (cmd.startsWith("key_")) {
                 nextion.handleKeypadInput(cmd);
-                if (cmd == "key_ok" || cmd == "key_clear") {
+                
+                // 🛑 КРИТИЧЕСКИ ВАЖНО: Сохраняем настройки в NVS после успешного ввода с клавиатуры
+                if (cmd == "key_ok") {
                     storage.saveSettings(control.settings);
+                    Serial.println("[TaskNextion] ✅ Schedule/Settings saved to NVS after keypad OK");
                 }
             }
 
-            // === Отладка ===
-            else if (cmd == "calibrate") { sensors.startCalibration(); }
-            else if (cmd.startsWith("assign ")) {
-                int firstSpace = cmd.indexOf(' ', 7);
-                if (firstSpace > 0) {
-                    int role = cmd.substring(7, firstSpace).toInt();
-                    int idx  = cmd.substring(firstSpace + 1).toInt();
-                    sensors.assignSensorToRole(role, idx);
-                }
-            }
+            // 🛑 ЕДИНСТВЕННЫЙ финальный else в конце всей цепочки
             else {
-                Serial.printf("[TaskNextion] Unknown command: '%s'\n", cmd.c_str());
+                Serial.printf("[TaskNextion] ⚠️ Unknown command: '%s'\n", cmd.c_str());
             }
         }
         vTaskDelay(NEXTION_UPDATE_INTERVAL / portTICK_PERIOD_MS);

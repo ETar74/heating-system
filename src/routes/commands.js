@@ -42,7 +42,7 @@ module.exports = function createCommandsRoutes({ prisma, broadcast, authenticate
           },
         });
 
-        broadcast({ type: 'command_queued', command: cmd });
+        broadcastToUsers({ type: 'command_queued', command: cmd });
         res.json(cmd);
       } catch (error) {
         res.status(500).json({ error: error.message });
@@ -71,5 +71,39 @@ module.exports = function createCommandsRoutes({ prisma, broadcast, authenticate
     }
   });
 
-  return router;
+  // 🛑 НОВОЕ: Маршрут для подтверждения выполнения команды ESP32
+  router.post(
+    '/:id/executed',
+    authenticateDevice, // ESP32 использует этот middleware для аутентификации
+    async (req, res) => {
+      try {
+        const commandId = parseInt(req.params.id, 10);
+        const { success, message } = req.body || {};
+
+        if (isNaN(commandId)) {
+          return res.status(400).json({ error: 'Неверный ID команды' });
+        }
+
+        // Обновляем статус команды в БД
+        await prisma.command.update({
+          where: { id: commandId },
+          data: {
+            status: success ? 'executed' : 'failed',
+            // Если в твоей схеме Prisma (schema.prisma) есть поле для результата/ошибки, 
+            // раскомментируй строку ниже:
+            // result: message || null, 
+          },
+        });
+
+        console.log(`[Commands] ✅ Команда #${commandId} помечена как ${success ? 'executed' : 'failed'}`);
+
+        res.json({ success: true, message: 'Command acknowledged' });
+      } catch (error) {
+        console.error(`[Commands] ❌ Ошибка подтверждения команды #${req.params.id}:`, error.message);
+        res.status(500).json({ error: error.message });
+      }
+    }
+  );
+
+  return router; // <-- Эта строка должна быть ПОСЛЕ добавленного кода
 };

@@ -3,6 +3,10 @@
 
 #include <Arduino.h>
 
+// Управление отладочными логами
+//define DEBUG_SCHEDULE 0  // 1 = включить логи расписания, 0 = выключить
+#define DEBUG_INTERLOCK 0 // 1 = включить логи интерлоков, 0 = выключить
+
 // ===== Wi-Fi и Сервер =====
 #define WIFI_SSID "Redmi123"
 #define WIFI_PASSWORD "qwerty123456"
@@ -32,7 +36,7 @@
 #define SENSOR_READ_INTERVAL     5000
 #define CONTROL_INTERVAL         1000
 #define SERVER_HEARTBEAT         60000
-#define NEXTION_UPDATE_INTERVAL  500
+#define NEXTION_UPDATE_INTERVAL  1000
 #define WIFI_CHECK_INTERVAL      10000
 
 // ===== Network Retry / Backoff =====
@@ -84,7 +88,7 @@ struct DeviceSchedule {
 
 #define TASK_CONTROL_STACK       4096
 #define TASK_SENSOR_STACK        4096
-#define TASK_NEXTION_STACK       4096
+#define TASK_NEXTION_STACK       8192
 #define TASK_NETWORK_STACK       8192
 
 // ===== Критические пределы =====

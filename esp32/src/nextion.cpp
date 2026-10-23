@@ -17,57 +17,25 @@ void Nextion::begin() {
 }
 
 void Nextion::resetCache() {
-    // Page 0
-    cache.txt_rval = ""; cache.txt_fval = ""; cache.txt_oval = "";
-    cache.txt_aval = ""; cache.txt_bval = "";
-    cache.txt_l1 = ""; cache.txt_l2 = ""; cache.txt_l3 = "";
-    cache.txt_pumps = ""; cache.txt_online = "";
-    cache.s_b = ""; cache.s_e = ""; cache.s_f = ""; cache.s_r = "";
-    cache.datetime_cache = "";
+    // Сбрасываем только числовые поля (цвета, картинки, чекбоксы)
+    // Строковые поля синхронизируются автоматически через sendTextIfChanged
+    
     cache.datetime_color = -1;
     cache.pic_pf = -1; cache.pic_pr = -1; cache.pic_pb = -1;
     cache.pic_pe = -1; cache.pic_flame = -1;
-
-    // Page 1
-    cache.t_ta = "";
-    cache.txt_ta = ""; cache.txt_tf = ""; cache.txt_tr = "";
-    cache.datetime1_cache = "";
     cache.img_b = -1; cache.img_ta = -1;
     cache.img_p1 = -1; cache.img_p2 = -1; cache.img_p3 = -1;
     cache.img_f1 = -1; cache.img_f2 = -1; cache.img_f3 = -1;
     cache.ph_l1 = -1; cache.ph_l2 = -1; cache.ph_l3 = -1;
-    cache.st_e = ""; cache.st_p1 = ""; cache.st_p2 = ""; cache.st_p3 = "";
-
-    // Page 2
-    cache.t_vbon = ""; cache.t_vbof = ""; cache.t_vfon = ""; cache.t_vfof = "";
-    cache.t_vron = ""; cache.t_vrof = ""; cache.t_vaon = ""; cache.t_vaof = "";
-    cache.t_vtm = "";
-
-    // Page 5
-    cache.t_cnum = "";
-    for (int i = 0; i < 5; i++) { cache.c_v[i] = ""; cache.c_t[i] = ""; }
-
-    // Page 6
-    cache.t_date = ""; cache.t_time = "";
-    cache.t_year = ""; cache.t_month = ""; cache.t_day = "";
-    cache.t_hour = ""; cache.t_minute = "";
     cache.ntp_status = -1;
-
-    // Page 7
-    cache.t_cur_dev = "";
-    cache.t_sch_en = "";
+    
     for (int i = 0; i < 4; i++) {
-        cache.t_s[i] = "";
         cache.chk_state[i] = -1;
         cache.bg_color[i] = -1;
     }
-    // Page 8
-    cache.keypad_input = "";
-    cache.keypad_template = "";
-
-    // Page 3
-    cache.t_st_b = ""; cache.t_st_e = ""; cache.t_st_f = ""; cache.t_st_r = "";
-    cache.t_tm_b = ""; cache.t_tm_e = ""; cache.t_tm_f = ""; cache.t_tm_r = "";
+    
+    // Строки НЕ сбрасываем — sendTextIfChanged сам синхронизирует
+    // при следующем update(), сравнивая cached с актуальным значением
 }
 
 void Nextion::sendCommand(const char* cmd) {
@@ -153,6 +121,14 @@ void Nextion::update() {
     if (millis() - lastUpdate < NEXTION_UPDATE_INTERVAL) return;
     lastUpdate = millis();
 
+    // // 🛑 ЛОГИРОВАНИЕ: какую страницу обновляем
+    // static uint8_t lastLoggedPage = 255;
+    // if (currentPage != lastLoggedPage) {
+    //     Serial.printf("[Nextion] update() -> page %d\n", currentPage);
+    //     lastLoggedPage = currentPage;
+    // }
+
+
     switch (currentPage) {
         case 0: updateMainScreen();     break;
         case 1: updateSchemaScreen();   break;
@@ -163,6 +139,9 @@ void Nextion::update() {
         case 6: updateTimeScreen();     break;
         case 7: updateScheduleScreen(); break;
         case 8: updateKeypadScreen(); break;
+        default:
+            Serial.printf("[Nextion] ERROR: unknown page %d\n", currentPage);
+            break;
     }
 }
 
@@ -361,10 +340,15 @@ void Nextion::updateTimeScreen() {
 void Nextion::updateScheduleScreen() {
     char buf[64];
     char cmd[64];
-    static const char* devNames[4] = { "ТТ котёл", "ЭК", "ТП", "РД" };
+    char compName[8];
+    
+    if (scheduleDevice >= DEVICE_COUNT) return;
+    
     DeviceSchedule &sched = control.settings.schedule[scheduleDevice];
 
-    sendTextIfChanged(cache.t_cur_dev, "t_cur_dev", devNames[scheduleDevice]);
+    static const char* devNamesASCII[4] = { "TT", "EK", "TP", "RD" };
+    sendTextIfChanged(cache.t_cur_dev, "t_cur_dev", devNamesASCII[scheduleDevice]);
+    delay(10);
 
     DateTime now = timekeeper.getDateTime();
     uint16_t currentMinutes = now.hour * 60 + now.minute;
@@ -372,54 +356,123 @@ void Nextion::updateScheduleScreen() {
     for (int i = 0; i < 4; i++) {
         TimeSlot &slot = sched.slots[i];
 
-        // 1. Текст интервала
+        snprintf(compName, sizeof(compName), "t_s%d", i);
+        
         if (slot.startH == 0 && slot.startM == 0 && slot.endH == 0 && slot.endM == 0) {
-            snprintf(buf, sizeof(buf), "%d.  --:-- — --:--", i + 1);
+            snprintf(buf, sizeof(buf), "%d. --:-- - --:--", i + 1);
         } else {
-            snprintf(buf, sizeof(buf), "%d.  %02d:%02d — %02d:%02d",
+            snprintf(buf, sizeof(buf), "%d. %02d:%02d - %02d:%02d",
                      i + 1, slot.startH, slot.startM, slot.endH, slot.endM);
         }
-        sendTextIfChanged(cache.t_s[i], String("t_s" + String(i)).c_str(), buf);
+        sendTextIfChanged(cache.t_s[i], compName, buf);
+        delay(10); // Задержка после каждой команды текста
 
-        // 2. Checkbox
         int8_t newChk = slot.enabled ? 1 : 0;
         if (cache.chk_state[i] != newChk) {
             cache.chk_state[i] = newChk;
             snprintf(cmd, sizeof(cmd), "c%d.val=%d", i, newChk);
             sendCommand(cmd);
+            delay(15); // Увеличенная задержка
         }
 
-        // 3. Цвет фона текстового поля t_sN (вместо отдельных bgN)
         uint16_t bgColor;
         if (!slot.enabled) {
-            bgColor = 0xC618;  // Светло-серый (неактивный)
+            bgColor = 0xC618;
         } else {
             uint16_t startMin = slot.startH * 60 + slot.startM;
             uint16_t endMin   = slot.endH * 60 + slot.endM;
             bool inInterval = (startMin < endMin)
                 ? (currentMinutes >= startMin && currentMinutes < endMin)
                 : (currentMinutes >= startMin || currentMinutes < endMin);
-            bgColor = inInterval ? 0x87F0 : 0xFFFF;  // Зелёный или белый
+            bgColor = inInterval ? 0x87F0 : 0xFFFF;
         }
         if (cache.bg_color[i] != (int16_t)bgColor) {
             cache.bg_color[i] = (int16_t)bgColor;
             snprintf(cmd, sizeof(cmd), "t_s%d.bco=%d", i, bgColor);
             sendCommand(cmd);
+            delay(15); // Увеличенная задержка
         }
     }
 }
+// void Nextion::updateScheduleScreen() {
+//     char buf[64];
+//     char cmd[64];
+//     char compName[8];
+    
+//     if (scheduleDevice >= DEVICE_COUNT) return;
+    
+//     DeviceSchedule &sched = control.settings.schedule[scheduleDevice];
+
+//     // 🛑 УБРАЛИ кириллицу из devNames!
+//     // Теперь отправляем только ASCII-идентификаторы
+//     static const char* devNamesASCII[4] = { "TT", "EK", "TP", "RD" };
+//     sendTextIfChanged(cache.t_cur_dev, "t_cur_dev", devNamesASCII[scheduleDevice]);
+
+//     DateTime now = timekeeper.getDateTime();
+//     uint16_t currentMinutes = now.hour * 60 + now.minute;
+
+//     for (int i = 0; i < 4; i++) {
+//         TimeSlot &slot = sched.slots[i];
+
+//         snprintf(compName, sizeof(compName), "t_s%d", i);
+        
+//         // 🛑 ТОЛЬКО ASCII: цифры, двоеточия, дефисы, пробелы
+//         if (slot.startH == 0 && slot.startM == 0 && slot.endH == 0 && slot.endM == 0) {
+//             snprintf(buf, sizeof(buf), "%d. --:-- - --:--", i + 1);
+//         } else {
+//             snprintf(buf, sizeof(buf), "%d. %02d:%02d - %02d:%02d",
+//                      i + 1, slot.startH, slot.startM, slot.endH, slot.endM);
+//         }
+//         sendTextIfChanged(cache.t_s[i], compName, buf);
+
+//         // Checkbox
+//         int8_t newChk = slot.enabled ? 1 : 0;
+//         if (cache.chk_state[i] != newChk) {
+//             cache.chk_state[i] = newChk;
+//             snprintf(cmd, sizeof(cmd), "c%d.val=%d", i, newChk);
+//             sendCommand(cmd);
+//             delay(10);
+//         }
+
+//         // Цвет фона
+//         uint16_t bgColor;
+//         if (!slot.enabled) {
+//             bgColor = 0xC618;
+//         } else {
+//             uint16_t startMin = slot.startH * 60 + slot.startM;
+//             uint16_t endMin   = slot.endH * 60 + slot.endM;
+//             bool inInterval = (startMin < endMin)
+//                 ? (currentMinutes >= startMin && currentMinutes < endMin)
+//                 : (currentMinutes >= startMin || currentMinutes < endMin);
+//             bgColor = inInterval ? 0x87F0 : 0xFFFF;
+//         }
+//         if (cache.bg_color[i] != (int16_t)bgColor) {
+//             cache.bg_color[i] = (int16_t)bgColor;
+//             snprintf(cmd, sizeof(cmd), "t_s%d.bco=%d", i, bgColor);
+//             sendCommand(cmd);
+//             delay(10);
+//         }
+//     }
+// }
 
 // ===== Page 8: КЛАВИАТУРА =====
+// СТАЛО (хорошо - только при изменении):
 void Nextion::updateKeypadScreen() {
-    // Эта функция вызывается автоматически при обновлении Page 8.
-    // Принудительная отправка уже делается в handleKeypadInput(),
-    // поэтому здесь только страховка на случай, если страница открылась сама.
-    char cmd[80];
-    snprintf(cmd, sizeof(cmd), "t_input.txt=\"%s\"", cache.keypad_input.c_str());
-    sendCommand(cmd);
-    snprintf(cmd, sizeof(cmd), "t_template.txt=\"%s\"", cache.keypad_template.c_str());
-    sendCommand(cmd);
+    // Ничего не отправляем в цикле.
+    // Данные отправляются только в handleKeypadInput() при нажатии клавиш
+    // и в showKeypad() при открытии клавиатуры.
+    // Пустая функция, чтобы не спамить.
 }
+// void Nextion::updateKeypadScreen() {
+//     // Эта функция вызывается автоматически при обновлении Page 8.
+//     // Принудительная отправка уже делается в handleKeypadInput(),
+//     // поэтому здесь только страховка на случай, если страница открылась сама.
+//     char cmd[80];
+//     snprintf(cmd, sizeof(cmd), "t_input.txt=\"%s\"", cache.keypad_input.c_str());
+//     sendCommand(cmd);
+//     snprintf(cmd, sizeof(cmd), "t_template.txt=\"%s\"", cache.keypad_template.c_str());
+//     sendCommand(cmd);
+// }
 
 // ===== Открытие клавиатуры =====
 void Nextion::showKeypad(uint8_t device, uint8_t slot, const char* tmpl) {
@@ -519,47 +572,83 @@ void Nextion::handleKeypadInput(const String &key) {
         return;
     }
     else if (action == "ok") {
-        // Сохранить
-        Serial.printf("[Nextion] OK pressed! Input: '%s'\n", cache.keypad_input.c_str());
-        String s = cache.keypad_input;
-        s.replace(" ", "");
-        int dashPos = s.indexOf('-');
-        if (dashPos > 0) {
-            String startStr = s.substring(0, dashPos);
-            String endStr = s.substring(dashPos + 1);
-            startStr.replace(":", "");
-            endStr.replace(":", "");
-
-            if (startStr.length() == 4 && endStr.length() == 4) {
-                uint8_t sH = startStr.substring(0, 2).toInt();
-                uint8_t sM = startStr.substring(2, 4).toInt();
-                uint8_t eH = endStr.substring(0, 2).toInt();
-                uint8_t eM = endStr.substring(2, 4).toInt();
-                control.setSlotTime(keypad.targetDevice, keypad.targetSlot, sH, sM, eH, eM);
-                Serial.printf("[Nextion] Saved: %02d:%02d-%02d:%02d\n", sH, sM, eH, eM);
-            } else {
-                Serial.printf("[Nextion] Bad format: '%s'\n", s.c_str());
-            }
+        char work[16];
+        strncpy(work, cache.keypad_input.c_str(), sizeof(work) - 1);
+        work[sizeof(work) - 1] = '\0';
+        
+        uint8_t sH, sM, eH, eM;
+        int parsed = sscanf(work, "%hhu:%hhu-%hhu:%hhu", &sH, &sM, &eH, &eM);
+        
+        if (parsed == 4 && sH < 24 && sM < 60 && eH < 24 && eM < 60) {
+            control.setSlotTime(keypad.targetDevice, keypad.targetSlot, sH, sM, eH, eM);
+            Serial.printf("[Nextion] Saved: %02d:%02d-%02d:%02d\n", sH, sM, eH, eM);
         } else {
-            Serial.printf("[Nextion] No dash in: '%s'\n", s.c_str());
+            Serial.printf("[Nextion] Bad input: '%s'\n", work);
         }
+        
         sendCommand("page 7");
         currentPage = 7;
+        delay(200);        // 200 мс достаточно (было 300-500)
         resetCache();
+        Serial.println("[Nextion] Keypad OK");
         return;
     }
-    else if (action == "cancel") {
-        // Отмена
-        Serial.println("[Nextion] Cancel pressed!");
-        sendCommand("page 7");
-        currentPage = 7;
-        resetCache();
-        return;
-    }
-    else {
-        Serial.printf("[Nextion] Unknown keypad action: '%s'\n", action.c_str());
-        return;
-    }
+//     else if (action == "ok") {
+//         Serial.printf("[Nextion] OK START, stack free: %u\n", 
+//                       uxTaskGetStackHighWaterMark(NULL));
+        
+//         // парсинг (char-based)...
+//         char work[16];
+//         strncpy(work, cache.keypad_input.c_str(), sizeof(work) - 1);
+//         work[sizeof(work) - 1] = '\0';
+        
+//         uint8_t sH, sM, eH, eM;
+//         int parsed = sscanf(work, "%hhu:%hhu-%hhu:%hhu", &sH, &sM, &eH, &eM);
+        
+//         if (parsed == 4 && sH < 24 && sM < 60 && eH < 24 && eM < 60) {
+//             control.setSlotTime(keypad.targetDevice, keypad.targetSlot, sH, sM, eH, eM);
+//             Serial.printf("[Nextion] Saved: %02d:%02d-%02d:%02d\n", sH, sM, eH, eM);
+//         }
+        
+//         Serial.printf("[Nextion] BEFORE resetCache, stack free: %u\n", 
+//                       uxTaskGetStackHighWaterMark(NULL));
+        
+//         sendCommand("page 7");
+//         currentPage = 7;
+//         delay(300);
+//         //resetCache();   // 🛑 ВОТ ЗДЕСЬ стек проседает на 4-6 КБ!
+        
+//         Serial.printf("[Nextion] AFTER resetCache, stack free: %u\n", 
+//                       uxTaskGetStackHighWaterMark(NULL));
+        
+//         Serial.println("[Nextion] OK: DONE");
+//         return;
+//     }
+
+            else if (action == "cancel") {
+                sendCommand("page 7");
+                currentPage = 7;
+                delay(200);
+                resetCache();
+                Serial.println("[Nextion] Keypad cancelled");
+                return;
+            }
+//     else if (action == "cancel") {
+//         Serial.println("[Nextion] Cancel pressed!");
+        
+//         sendCommand("page 7"); 
+//         Serial2.flush(); // 🛑 Ждем отправки
+//         currentPage = 7;
+        
+//         delay(300); // 🛑 Увеличили до 300 мс
+        
+//         resetCache();
+//         return;
+//     }
+//     else {
+//         Serial.printf("[Nextion] Unknown keypad action: '%s'\n", action.c_str());
+//         return;
+//     }
 
     // Обновляем поле ввода на экране
     if (changed) {
@@ -602,11 +691,104 @@ void Nextion::updateStatusScreen() {
     // TODO
 }
 
-bool Nextion::hasCommand() { return Serial2.available() > 0; }
-
-
+bool Nextion::hasCommand() {
+    return Serial2.available() > 0 || rxBuffer.length() > 0;
+}
+// Извлекает ОДНУ команду из буфера, оставляя остаток
+String Nextion::extractCommand(String &buf) {
+    if (buf.length() == 0) return "";
+    
+    // Массив всех известных команд с фиксированной длиной
+    static const char* commands[] = {
+        "pg0", "pg1", "pg2", "pg3", "pg4", "pg5", "pg6", "pg7", "pg8",
+        "key_ok", "key_cancel", "key_clear", "key_colon", "key_dash",
+        "key_back", "key_space",
+        "key_0", "key_1", "key_2", "key_3", "key_4",
+        "key_5", "key_6", "key_7", "key_8", "key_9",
+        "sch_dev_0", "sch_dev_1", "sch_dev_2", "sch_dev_3",
+        "sch_chk_0", "sch_chk_1", "sch_chk_2", "sch_chk_3",
+        "sch_edit_0", "sch_edit_1", "sch_edit_2", "sch_edit_3",
+        "sch_save",
+        "manual_boiler_on", "manual_boiler_off",
+        "manual_elec_on", "manual_elec_off",
+        "manual_floor_on", "manual_floor_off",
+        "manual_room_on", "manual_room_off",
+        "manual_radiator_on", "manual_radiator_off",
+        "manual_rad_on", "manual_rad_off",
+        "emergency_stop",
+        "cal_scan", "cal_save", "calibrate",
+        "save_set",
+        "inc_bon", "inc_bof", "inc_fon", "inc_fof",
+        "inc_ron", "inc_rof", "inc_aon", "inc_aof", "inc_tm",
+        "dec_bon", "dec_bof", "dec_fon", "dec_fof",
+        "dec_ron", "dec_rof", "dec_aon", "dec_aof", "dec_tm",
+        "time_min_inc", "time_min_dec",
+        "time_hour_inc", "time_hour_dec",
+        "time_day_inc", "time_day_dec",
+        "time_mon_inc", "time_mon_dec",
+        "time_year_inc", "time_year_dec",
+        "time_sync_ntp", "time_save",
+        NULL
+    };
+    
+    // Сначала ищем точное совпадение с известной командой
+    for (int i = 0; commands[i] != NULL; i++) {
+        int len = strlen(commands[i]);
+        if (buf.startsWith(commands[i])) {
+            String cmd = buf.substring(0, len);
+            buf = buf.substring(len);  // Остаток остаётся в буфере
+            return cmd;
+        }
+    }
+    
+    // Команды с переменной длиной: cal_inc_N, cal_dec_N
+    if (buf.startsWith("cal_inc_") || buf.startsWith("cal_dec_")) {
+        int end = 8;  // "cal_inc_" = 8 символов
+        while (end < buf.length() && isDigit(buf[end])) end++;
+        String cmd = buf.substring(0, end);
+        buf = buf.substring(end);
+        return cmd;
+    }
+    
+    // assign N M
+    if (buf.startsWith("assign ")) {
+        int end = 7;
+        while (end < buf.length() && (isDigit(buf[end]) || buf[end] == ' ')) end++;
+        String cmd = buf.substring(0, end);
+        buf = buf.substring(end);
+        return cmd;
+    }
+    
+    // Неизвестная команда — берём до 20 символов
+    int end = min(20, (int)buf.length());
+    String cmd = buf.substring(0, end);
+    buf = buf.substring(end);
+    return cmd;
+}
 
 String Nextion::getCommand() {
-    Serial2.setTimeout(10);
-    return Serial2.readStringUntil('\n');
+    while (Serial2.available()) {
+        char c = Serial2.read();
+        
+        if (c == '\n' || c == '\r') {
+            if (rxBuffer.length() > 0) {
+                String cmd = rxBuffer;
+                rxBuffer = "";
+                return cmd;
+            }
+            continue;
+        }
+        
+        if ((uint8_t)c == 0xFF) continue;
+        
+        if (c >= 32 && c <= 126) {
+            rxBuffer += c;
+        }
+    }
+    
+    if (rxBuffer.length() > 0) {
+        return extractCommand(rxBuffer);
+    }
+    
+    return "";
 }

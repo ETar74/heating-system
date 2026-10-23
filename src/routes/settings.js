@@ -143,7 +143,7 @@ module.exports = function createSettingsRoutes({ prisma, broadcast, isDeviceOnli
           },
         });
 
-        broadcast({ type: 'settings_updated' });
+        broadcastToUsers({ type: 'settings_updated' });
 
         res.json({
           success: true,
@@ -220,7 +220,7 @@ module.exports = function createSettingsRoutes({ prisma, broadcast, isDeviceOnli
           },
         });
 
-        broadcast({ type: 'settings_updated' });
+        broadcastToUsers({ type: 'settings_updated' });
         res.json({ message: 'Settings updated' });
       } catch (error) {
         res.status(500).json({ error: error.message });

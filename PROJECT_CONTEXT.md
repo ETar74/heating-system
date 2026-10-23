@@ -1,202 +1,212 @@
-# 📋 Контекст проекта "Система управления отоплением"
+# PROJECT_CONTEXT.md — ПАСПОРТ ПРОЕКТА
 
-## 🎯 О проекте
-
-Умная система управления гибридным отоплением частного дома на базе ESP32.
-Позволяет контролировать твердотопливный и электрокотёл, тёплые полы, радиаторы и теплоаккумулятор.
-
-**Автор:** ETar74  
-**Репозиторий:** https://github.com/ETar74/heating-system
+> Единый источник правды о системе. Передавать любой LLM/разработчику вместе с `.clinerules`.
+> Версия документа: 1.0 | Дата: 2026-10-20 | Статус системы: рабочая, в активной разработке
 
 ---
 
-## 🏗️ Архитектура проекта
+## 1. ОБЩЕЕ ОПИСАНИЕ
 
-### Технологический стек
+Система мониторинга и управления отоплением частного дома. Управляет четырьмя контурами:
+твердотопливный котёл, электрокотёл, тёплый пол, радиаторы.
+Контроллер работает АВТОНОМНО при потере связи с сервером (локальное расписание + критические защиты).
+Критичность: ВЫСОКАЯ — ошибка кода может привести к пожару, разморозке труб или потопу.
 
-| Компонент | Технология | Порт |
-|-----------|-----------|------|
-| **Frontend** | React + Vite | 5173 |
-| **Backend** | Node.js + Express (монолит) | 3000 |
-| **Database** | PostgreSQL 16 | 5433 |
-| **Real-time** | WebSocket (ws) | 3000 |
-| **Telegram Bot** | node-telegram-bot-api (встроен в backend) | - |
-| **ORM** | Prisma | - |
-| **Деплой** | Docker + Docker Compose | - |
+---
 
-### Структура папок
+## 2. СТРУКТУРА РЕПОЗИТОРИЯ (MONOREPO)
+
 heating-system/
-├── server.js ← Entry point: Express + WebSocket + сборка маршрутов
-├── src/
-│ ├── middleware/ ← auth (JWT/роли), deviceAuth (ESP32), rateLimit
-│ ├── routes/ ← auth, users, telemetry, settings, events, commands, device, ota
-│ ├── lib/ ← constants, settingsSchema (валидация), alarms, online
-│ └── bot.js ← Telegram-бот
-│
-├── scripts/ ← dev-утилиты (check_keys.js, monitor.ps1, test-sync.json)
-│
-├── frontend/
+├── esp32/ Прошивка контроллера (C++ / PlatformIO / FreeRTOS)
+│ ├── platformio.ini Зависимости: ArduinoJson, OneWire, DallasTemperature, HTTPUpdate
 │ └── src/
-│ ├── App.jsx ← Главный компонент, маршрутизация
-│ ├── api.js ← Axios + интерсепторы (401/403)
-│ ├── pages/
-│ │ ├── Dashboard.jsx ← Главная панель
-│ │ ├── Settings.jsx ← Настройки системы
-│ │ ├── Users.jsx ← Управление пользователями
-│ │ ├── Events.jsx ← Журнал событий
-│ │ └── Login.jsx ← Авторизация
-│ ├── components/
-│ │ ├── Layout.jsx ← Общий макет (меню + контент)
-│ │ ├── TempWidget.jsx ← Виджет температуры с трекером
-│ │ └── MobileMenu.jsx
-│ └── utils/
-│ └── permissions.js ← Проверка ролей (canEditSettings и т.д.)
-│
-├── docker-compose.yml ← Конфигурация Docker
-├── PROJECT_CONTEXT.md ← ЭТОТ ФАЙЛ
-└── README.md
+│ ├── main.cpp Точка входа, создание задач FreeRTOS
+│ ├── config.h ЕДИНСТВЕННЫЙ источник #define: пины, пороги, тайминги, секреты
+│ ├── control.h/cpp Реле, гистерезис, расписание, manual override, фазы, interlock, события
+│ ├── sensors.h/cpp DS18B20 (1-Wire): опрос, валидация, калибровка, роли
+│ ├── network.h/cpp WiFi, HTTP sync, очередь команд, OTA, LittleFS-буфер телеметрии
+│ ├── nextion.h/cpp Дисплей Nextion 3.5" (UART), кэш отправки, клавиатура
+│ ├── storage.h/cpp NVS (Preferences): настройки, состояния, magic-валидация
+│ └── timekeeper.h/cpp NTP, RTC, расписание по времени
+├── src/ Backend Node.js / Express (порт 3000)
+│ ├── server.js Точка входа
+│ ├── routes/ auth, device, commands, settings, telemetry, ota, users, events
+│ ├── middleware/ auth (JWT), deviceAuth (Bearer token), rateLimit
+│ ├── lib/ seed.js, online.js, alarms.js, notifications.js
+│ └── bot.js Telegram-бот уведомлений (опционально)
+├── frontend/ React + Vite (порт 5173): Login, Dashboard, Settings+OTA, Users, Events
+├── prisma/schema.prisma Модели: User, Role, Device, Telemetry, Parameter, Event, Firmware, DeviceCache
+├── docker-compose.yml Продакшн-деплой
+├── .clinerules Правила для ИИ-агентов (конституция проекта)
+├── ARCHITECTURE.md Диаграммы взаимодействий и потоки данных
+└── TIMING_ANALYSIS.md Расчёт нагрузки и временных маржей
+
 
 ---
 
-## 👥 Роли и права доступа (RBAC)
+## 3. АППАРАТНАЯ ЧАСТЬ
 
-| Роль | Описание |
-|------|----------|
-| **ADMIN** | Полный доступ ко всему |
-| **OPERATOR** | Управление настройками и устройствами |
-| **VIEWER** | Только просмотр |
-
-### Матрица прав
-
-| Функция | ADMIN | OPERATOR | VIEWER |
-|---------|:-----:|:--------:|:------:|
-| Просмотр главной панели | ✅ | ✅ | ✅ |
-| Просмотр событий | ✅ | ✅ | ✅ |
-| Изменение настроек | ✅ | ✅ | ❌ |
-| Управление котлом/насосами | ✅ | ✅ | ❌ |
-| Просмотр пользователей | ✅ | ❌ | ❌ |
-| Создание/редактирование пользователей | ✅ | ❌ | ❌ |
-| Удаление пользователей | ✅ | ❌ | ❌ |
-| Telegram-команды управления | ✅ | ✅ | ❌ |
-| Telegram-команды просмотра | ✅ | ✅ | ✅ |
+| Элемент | Назначение | Примечание |
+|---------|-----------|-----------|
+| ESP32 (240 МГц, 2 ядра) | Контроллер | FreeRTOS, 4 задачи |
+| Реле GPIO5 | Котёл (ТТ) | HIGH = ВКЛ |
+| Реле GPIO21 | Электрокотёл | HIGH = ВКЛ |
+| Реле GPIO18 | Насос тёплого пола | HIGH = ВКЛ |
+| Реле GPIO19 | Насос радиаторов | HIGH = ВКЛ |
+| DS18B20 ×4 (1-Wire) | Котёл, ТА, пол, комната | + outdoor (часто отсутствует, valid=0) |
+| ADC GPIO34 | Датчик фаз L1/L2/L3 | Декодер диапазонов ADC, дебаунс 3 замера |
+| Кнопка (INPUT_PULLUP) | Калибровка датчиков | |
+| Nextion 3.5" | Локальный HMI | Serial2, 115200 baud, 9 страниц |
 
 ---
 
-## ✅ Что УЖЕ сделано
+## 4. ЗАДАЧИ FREERTOS
 
-### Бэкенд (`server.js`)
-- ✅ Middleware `authenticateToken` — проверка JWT
-- ✅ Middleware `requireRole` — проверка ролей (читает из JWT)
-- ✅ Защита `/api/users` (GET/POST/PUT/DELETE) — только ADMIN
-- ✅ Защита `/api/settings/:key` (PUT) — ADMIN + OPERATOR
-- ✅ Защита `/api/settings` (PUT) — ADMIN + OPERATOR
-- ✅ Защита `/api/commands` (POST) — ADMIN + OPERATOR
-- ✅ Telegram-бот: проверка ролей для команд управления
+| Задача | Приоритет | Стек | Интервал | Назначение |
+|--------|-----------|------|----------|-----------|
+| TaskControl | 5 | 8192 | 5 000 мс | Реле, гистерезис, расписание, фазы, interlock |
+| TaskSensors | 3 | 4096 | 5 000 мс | Опрос DS18B20 (конвертация ~750 мс) |
+| TaskNetwork | 2 | 8192 | heartbeat 60 c | Sync, команды, OTA, буфер телеметрии |
+| TaskNextion | 1 | 8192 (минимум!) | 1 000 мс | Обновление дисплея, разбор команд UART |
 
-### Фронтенд
-- ✅ Обработка 401 → редирект на логин
-- ✅ Обработка 403 → alert с ошибкой (без редиректа)
-- ✅ Сохранение `user` в localStorage (для проверки ролей на фронте)
-- ✅ Утилита `utils/permissions.js` с функциями `canEditSettings`, `canManageUsers`, `canControlDevices`
-- ✅ `Settings.jsx`: скрытие кнопок ✏️💾❌ для VIEWER, показ "Только просмотр"
-- ✅ Правильный порядок колонок в таблице настроек: Параметр → Значение → Действия
-
-### UI/UX
-- ✅ Двухколоночная сетка на странице настроек
-- ✅ Уменьшенные карточки на главной панели (size-sm, size-lg, size-xs)
-- ✅ Адаптивные мобильные карточки для пользователей
-- ✅ Форма редактирования пользователей с подписями полей
-- ✅ Индикатор температуры в виде прямоугольника с чёрточкой
-
-### Инфраструктура
-- ✅ Проект на GitHub (https://github.com/ETar74/heating-system)
-- ✅ Docker Compose для деплоя
-- ✅ Настроены volumes для hot reload
+Контроль стека: `uxTaskGetStackHighWaterMark(NULL)` (норма для TaskNextion: free > 6000).
 
 ---
 
-## ⬜ Что НУЖНО сделать
+## 5. ЛОГИКА УПРАВЛЕНИЯ
 
-### Приоритет: ВЫСОКИЙ 🔴
+### Иерархия приоритетов (старший побеждает)
+1. Emergency stop (все реле OFF на 5 минут)
+2. Критические пороги (котёл > 95°C, ТА > 85°C) — хардкод, не изменяемы извне
+3. Sensor fault: датчик невалиден => контур ВЫКЛ
+4. Manual override (таймаут по умолчанию 30 мин, возврат в AUTO)
+5. Расписание (4 устройства × 4 слота, гистерезис внутри активного слота)
+6. Удалённые команды сервера
 
-1. **UI-защита для VIEWER в настройках**
-   - Сделать поля ввода `disabled` для VIEWER
-   - Добавить визуальную индикацию "режим только чтения"
+### Interlock (причины в логах)
+SENSOR_FAULT | PHASE_LOSS | SCHEDULE_OFF | TEMP_DEMAND | HEATING | MANUAL
 
-2. **Telegram-бот: разграничение команд**
-   - Команды просмотра (`/status`, `/events`, `/settings`) — всем
-   - Команды управления (`/boiler_on`, `/floor_pump_on`) — только ADMIN + OPERATOR
-   - Проверка привязки Telegram ID к пользователю
-
-### Приоритет: СРЕДНИЙ 🟡
-
-3. **Dashboard.jsx: защита элементов управления**
-   - Скрыть/заблокировать кнопки управления устройствами для VIEWER
-   - Показывать уведомления о недостатке прав
-
-4. **Events.jsx: просмотр для всех ролей**
-   - Убедиться, что все роли могут просматривать события
-
-### Приоритет: НИЗКИЙ 🟢
-
-5. **Улучшения UI**
-   - Тёмная тема
-   - Улучшение графиков
-   - Адаптация для планшетов
-
-6. **Документация**
-   - README с инструкциями по установке
-   - Скриншоты интерфейса
+### Особенности контуров
+- Тёплый пол: насос включается только если в ТА есть тепло (TA > FLOW_HOT_TA_MIN).
+- Гистерезис: включение при t <= threshold_on, выключение при t >= threshold_off, между порогами состояние не меняется.
 
 ---
 
-## 🔑 Ключевые файлы для работы
+## 6. ПРОТОКОЛЫ ОБМЕНА
 
-### При изменении прав доступа:
-- `backend/src/server.js` — middleware `requireRole` и роуты
-- `frontend/src/utils/permissions.js` — функции проверки ролей
-- `frontend/src/api.js` — обработка ошибок 401/403
+### ESP32 ↔ Server (HTTP/JSON, Authorization: Bearer DEVICE_TOKEN)
+- `POST /api/device/sync` — телеметрия, состояния, события; в ответ: settings + schedule
+- `GET /api/commands/pending` — очередь команд (SET_SCHEDULE, OTA_UPDATE, SET_*)
+- `POST /api/commands/:id/executed` — подтверждение исполнения
+- `GET /api/ota/check` — проверка обновлений (раз в час)
+- `GET /api/ota/download/:id` — бинарник прошивки
+- `POST /api/device/telemetry` — flush офлайн-буфера из LittleFS
 
-### При изменении UI:
-- `frontend/src/pages/Settings.jsx` — страница настроек
-- `frontend/src/pages/Dashboard.jsx` — главная панель
-- `frontend/src/components/TempWidget.jsx` — виджеты температур
+### Frontend ↔ Server
+REST + JWT (роли ADMIN / USER / DEVICE); 401 → logout через интерцептор Axios.
 
-### При работе с Telegram-ботом:
-- `backend/src/server.js` — секция с `bot.onText(...)`
-
----
-
-## 🐛 Известные проблемы
-
-1. **VIEWER видит активные поля в настройках**
-   - Статус: В процессе решения
-   - Решение: добавить `disabled` к input/select
-
-2. **Telegram-бот не проверяет роли для некоторых команд**
-   - Статус: Требуется реализация
-   - Нужно добавить проверку `user.role.name` перед выполнением
+### ESP32 ↔ Nextion (UART)
+- Исходящие команды завершаются `0xFF 0xFF 0xFF`.
+- Входящие команды: `prints "имя",0` в событиях страниц/кнопок Nextion Editor.
+- Префиксы команд: `pg0..pg8`, `key_*`, `sch_dev_N`, `sch_chk_N`, `sch_edit_N`, `sch_save`,
+  `manual_*`, `inc_*/dec_*`, `save_set`, `time_*`, `cal_*`, `assign N M`, `emergency_stop`.
+- Команды приходят СКЛЕЕННЫМИ ("pg2pg0") — разбор через `rxBuffer` + `extractCommand()`.
 
 ---
 
-## 🛠 Команды для разработки
+## 7. СТРАНИЦЫ NEXTION
 
-```bash
-# Пересобрать всё
-docker-compose up -d --build
+| № | Назначение | Ключевые компоненты |
+|---|-----------|---------------------|
+| 0 | Главная | t_rval/t_fval/t_oval/t_aval/t_bval, pic_pf/pr/pb/pe, pic_flame, t_l1..l3, t_online |
+| 1 | Схема | img_b, img_ta, img_p1..p3, img_f1..f3, ph_l1..l3, st_e, st_p1..p3 |
+| 2 | Настройки | t_vbon/t_vbof/t_vfon/t_vfof/t_vron/t_vrof/t_vaon/t_vaof/t_vtm |
+| 3 | Быстрый доступ | t_st_b/e/f/r, t_tm_b/e/f/r |
+| 4 | Статус | (в разработке) |
+| 5 | Калибровка | t_cnum, c_v0..4, c_t0..4 |
+| 6 | Дата/время | t_date/t_time/t_year/.../t_minute, t_ntp |
+| 7 | Расписание | t_cur_dev, t_s0..t_s3, c0..c3 (чекбоксы) |
+| 8 | Клавиатура | t_input, t_template; команды key_0..9, key_colon, key_dash, key_back, key_clear, key_ok, key_cancel |
 
-# Пересобрать только backend
-docker-compose up -d --build backend
+Правило: динамические тексты через UART — ТОЛЬКО ASCII. Кириллица — только статикой в Nextion Editor.
 
-# Пересобрать только frontend
-docker-compose up -d --build frontend
+---
 
-# Посмотреть логи
-docker-compose logs -f backend
-docker-compose logs -f frontend
+## 8. БЕЗОПАСНОСТЬ И FAIL-SAFE
 
-# Остановить всё
-docker-compose down
+1. Старт: все реле принудительно LOW ДО чтения NVS.
+2. NVS: чтение только при magic number 0xDEADBEEF, иначе safe defaults (всё OFF).
+3. Запись в NVS только при изменении (ресурс flash ~100k циклов).
+4. Перед решением о нагреве — `sensors.isSensorValid(role)`; невалиден => контур OFF.
+5. Критические пороги хардкодом в config.h, не доступны из веба/NVS.
+6. Потеря связи: автономная работа по локальному расписанию; телеметрия копится в LittleFS.
+7. Аутентификация: JWT (пользователи), статический DEVICE_TOKEN (контроллер).
+8. Дефолтный admin/admin123 из seed.js подлежит смене в продакшене.
 
-# Зайти внутрь контейнера
-docker-compose exec backend sh
+---
+
+## 9. КОНФИГУРАЦИЯ И СЕКРЕТЫ
+
+- Единственный источник `#define` — `esp32/src/config.h` (пины, пороги, тайминги, SSID, токен).
+- Backend-секреты — `.env` (JWT_SECRET, ESP32_TOKEN, DATABASE_URL, CORS_ORIGINS).
+- Дублирование `#define` в других заголовках ЗАПРЕЩЕНО (исторический баг network.h).
+- Секреты не дублировать в документации, комментариях и логах.
+
+---
+
+## 10. ТАЙМИНГИ
+
+| Операция | Интервал | Худшее время | Маржа |
+|----------|----------|-------------|-------|
+| Цикл управления реле | 5 000 мс | ~120 мс | 97% |
+| Опрос датчиков | 5 000 мс | ~800 мс | 84% |
+| Обновление дисплея | 1 000 мс | ~60 мс | 94% |
+| Heartbeat/sync | 60 000 мс (backoff 5c…5мин при отказе) | ~5 000 мс | 50% |
+| Реакция на перегрев/обрыв датчика | — | < 1 000 мс | критично |
+| Реакция на кнопку дисплея | — | < 1 000 мс | ОК |
+| Реакция на веб-команду | — | до 60 c (heartbeat) | приемлемо |
+
+---
+
+## 11. КАТАЛОГ ГРАБЛЕЙ (УРОКИ ПРОШЛЫХ ОТЛАДОК — НЕ ВОЗВРАЩАТЬ)
+
+1. Stack overflow TaskNextion из-за цепочек String; лечится стеком 8192 + char[]/snprintf/sscanf.
+2. Зависание Nextion: переполнение UART-буфера при пачке команд => потеря 0xFF-терминаторов;
+   лечится delay(100–300 мс) после `page N` и delay(5–10 мс) между командами отрисовки.
+3. UTF-8/кириллица через UART вешает парсер Nextion — только ASCII в динамике.
+4. `DeviceEvent` с `const char*` = dangling pointer; хранить char[16]/char[64].
+5. `continue` при пустой команде в цикле `while(hasCommand())` = infinite loop; использовать `break`.
+6. `hasCommand()` обязан учитывать rxBuffer, иначе команды теряются/залипают.
+7. Веб шлёт deviceId 1..4, массивы ESP32 0..3 — нормализовать (`devId--`).
+8. После SET_SCHEDULE из сети обязателен `nextion.resetCache()` при открытом экране 7.
+9. `resetCache()` с 50+ присваиваниями String опасен для стека; сбрасывать только числовые поля кэша.
+10. Сигнатуры .h/.cpp обязаны совпадать; публичны: currentPage, scheduleDevice, resetCache().
+
+---
+
+## 12. СОГЛАШЕНИЯ КОДА
+
+- Правки минимальны, по одной за раз; после правки — сборка `pio run`.
+- Функции для вставки показывать ЦЕЛИКОМ.
+- Пометки правок: `// FIX-YYYY-MM-DD: причина`.
+- Горячие пути задач: char[] + snprintf/sscanf, без String-цепочек.
+- HTTP-клиент всегда с `setTimeout()`; никаких блокировок в TaskControl.
+- Логи: префиксы `[Control] [Sensors] [Network] [Nextion] [TaskNextion] [Storage] [TimeKeeper]`.
+
+---
+
+## 13. СБОРКА И ДИАГНОСТИКА
+Сборка: pio run
+Прошивка: pio run -t upload
+Лог: pio device monitor -b 115200
+Стек задачи: uxTaskGetStackHighWaterMark(NULL)
+Backend: node server.js | Frontend: npm run dev (frontend/)
+
+
+---
+
+## 14. СЛОВАРЬ
+
+ТА — тепловой аккумулятор | MO — manual override | Interlock — цепочка защитных проверок
+before/after-логи — диагностика задач | rxBuffer — буфер склеенных команд UART
+Magic number — сигнатура целостности NVS (0xDEADBEEF) | Fail-Safe — все реле OFF при любом отказе

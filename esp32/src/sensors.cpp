@@ -110,7 +110,7 @@ void Sensors::loadAddresses() {
         } else {
             Serial.printf("[Sensors] Role %d (%s): ", role, names[role]);
             for (int b = 0; b < 8; b++) Serial.printf("%02X", (*a)[b]);
-            Serial.println();
+            //Serial.println();
         }
     }
 }

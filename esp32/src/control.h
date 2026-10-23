@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include "config.h"
+#include "control_logic.h"  // Для RelayDecision, PhaseStatus
 
 #define MAX_EVENTS 20
 
@@ -37,6 +38,7 @@ public:
     void begin();
     void update();
 
+    // ===== Public API (Nextion, Server commands) =====
     void setManualOverride(uint8_t device, bool state);
     void clearAllManualOverrides();
     void emergencyStop();
@@ -55,43 +57,35 @@ public:
     void clearSlot(uint8_t device, uint8_t slot);
     void setSlotTime(uint8_t device, uint8_t slot, uint8_t startH, uint8_t startM, uint8_t endH, uint8_t endM);
 
+    // События
     bool hasPendingEvents();
     DeviceEvent getNextEvent();
     int getEventCount();
     void addEvent(const char* type, const char* message);
 
+    // Данные
     SystemSettings settings;
     DeviceStates states;
     bool phaseL1 = false, phaseL2 = false, phaseL3 = false;
 
 private:
+    // ===== Оркестрация =====
     void checkManualOverrides();
-    void controlBoiler();
-    void controlElecBoiler();
-    void controlFloorPump();
-    void controlRadiatorPump();
-    void checkCriticalConditions();
     void checkPhases();
-    void decodePhases(int adc, bool &l1, bool &l2, bool &l3);
-    bool isNightMode();
+    void evaluateAllRelays();        // Вызывает control_logic::evaluateAllRelays
+    void applyRelayDecisions();      // Применяет решения через control_io
     void generateStateChangeEvents();
 
-    void setBoiler(bool state);
-    void setElecBoiler(bool state);
-    void setFloorPump(bool state);
-    void setRadiatorPump(bool state);
-
+    // Внутренние хелперы
     ManualOverride* getMO(uint8_t device);
     bool getDeviceState(uint8_t device);
     void setDeviceState(uint8_t device, bool state);
 
-    void updateRelay(uint8_t pin, bool &currentState, bool newState, const char* name);
-    void printRelayStatus();
-
-    DeviceStates previousStates;
-
     bool pendL1 = false, pendL2 = false, pendL3 = false;
     uint8_t phaseDebounce = 0;
+
+    // Состояние
+    DeviceStates previousStates;
 
     DeviceEvent eventQueue[MAX_EVENTS];
     uint8_t eqHead = 0;
@@ -101,6 +95,7 @@ private:
 
     unsigned long lastControlTime = 0;
     unsigned long lastStatusPrint = 0;
+    unsigned long lastPhaseCheck = 0;
 };
 
 extern Control control;

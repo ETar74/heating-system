@@ -1,8 +1,10 @@
-﻿#include "network.h"
+﻿
+#include "network.h"
 #include "timekeeper.h"
 #include "sensors.h"
 #include "control.h"
 #include <HTTPUpdate.h>  // 🆕 НОВОЕ: Библиотека для OTA обновлений
+#include "storage.h"   // 🛑 ДОБАВИТЬ ЭТУ СТРОКУ
 #include <LITTLEFS.h>
 
 Network network;
@@ -66,6 +68,13 @@ void Network::checkWiFi() {
 }
 
 void Network::update() {
+    // 🚀 НОВОЕ: Если WebSocket только что подключился, сразу проверяем команды
+    extern bool wsJustConnected;
+    if (wsJustConnected) {
+        wsJustConnected = false;
+        Serial.println("[Network] WebSocket reconnected, checking pending commands...");
+        fetchCommands();  // Немедленно проверяем pending команды
+    }
     checkWiFi();
     // Periodic OTA check (once per hour)
     if (millis() - lastOtaCheck >= OTA_CHECK_INTERVAL_MS) {
@@ -142,6 +151,8 @@ bool Network::syncWithServer() {
         flushTelemetryBuffer();
         // Получить pending команды от сервера
         fetchCommands();
+        // 2. 🛑 НОВОЕ: Обрабатываем и подтверждаем их!
+        processPendingCommands();
         return true;
     } else {
         serverConnected = false;
@@ -182,6 +193,26 @@ String Network::buildSyncPayload() {
     settings["night_start"]    = s.night_start;
     settings["night_end"]      = s.night_end;
 
+    // ===== РАСПИСАНИЕ (Schedule) внутри settings =====
+    settings["schedule"] = JsonArray();
+    JsonArray schedArr = settings["schedule"].to<JsonArray>();
+    for (int devId = 0; devId < DEVICE_COUNT; devId++) {
+        JsonObject devObj = schedArr.add<JsonObject>();
+        const DeviceSchedule &sched = s.schedule[devId];
+        
+        devObj["slots"] = JsonArray();
+        JsonArray slotsArr = devObj["slots"].to<JsonArray>();
+        for (int slotIdx = 0; slotIdx < SCHEDULE_SLOTS_PER_DEVICE; slotIdx++) {
+            JsonObject slotObj = slotsArr.add<JsonObject>();
+            slotObj["enabled"] = sched.slots[slotIdx].enabled;
+            slotObj["startH"]  = sched.slots[slotIdx].startH;
+            slotObj["startM"]  = sched.slots[slotIdx].startM;
+            slotObj["endH"]    = sched.slots[slotIdx].endH;
+            slotObj["endM"]    = sched.slots[slotIdx].endM;
+        }
+    }
+    Serial.printf("[Network] Schedule synced: %d devices\n", DEVICE_COUNT);
+
     JsonObject telemetry = doc["telemetry"].to<JsonObject>();
     telemetry["room_temp"] = d.room;
     telemetry["boiler_temp"] = d.boiler;
@@ -217,9 +248,8 @@ String Network::buildSyncPayload() {
 
 bool Network::fetchCommands() {
     HTTPClient http;
-    // URL для получения pending команд
     String url = String("http://") + SERVER_HOST + ":" + SERVER_PORT + "/api/commands/pending";
-    Serial.printf("[Network] 📡 Запрос pending команд (GET): %s\\n", url.c_str());
+    Serial.printf("[Network] 📡 Запрос pending команд (GET): %s\n", url.c_str());
 
     http.begin(url);
     http.addHeader("Authorization", "Bearer " DEVICE_TOKEN);
@@ -228,7 +258,7 @@ bool Network::fetchCommands() {
 
     if (httpCode == HTTP_CODE_OK) {
         String response = http.getString();
-        Serial.printf("[Network] ✅ Получено pending команд. Длина: %d\\n", response.length());
+        Serial.printf("[Network] ✅ Получено pending команд. Длина: %d\n", response.length());
 
         JsonDocument doc;
         DeserializationError error = deserializeJson(doc, response);
@@ -239,7 +269,9 @@ bool Network::fetchCommands() {
                 if (cmdCount < 10) {
                     ServerCommand &sc = commandQueue[(cmdHead + cmdCount) % 10];
                     sc.id = cmd["id"];
-                    sc.type = cmd["type"].as<String>();
+                    
+                    // 🛑 FIX: Читаем поле "command" (как в бэкенде), с fallback на "type"
+                    sc.type = cmd["command"] | cmd["type"] | "";
 
                     JsonObject p = cmd["payload"];
                     if (p["key"].is<const char*>()) {
@@ -250,16 +282,81 @@ bool Network::fetchCommands() {
                         sc.payloadDevice = p["device"].as<String>();
                         sc.payloadAction = p["action"].as<String>();
                     }
+                    
+                    // 🛑 FIX: Явная проверка на SET_SCHEDULE и логирование всего payload
+                    if (sc.type == "SET_SCHEDULE" || sc.type == "GET_SCHEDULE") {
+                        String jsonStr;
+                        serializeJson(p, jsonStr);
+                        sc.payloadString = jsonStr;
+                        Serial.printf("[Network] 📋 Schedule command received: '%s'\n", sc.type.c_str());
+                        Serial.printf("[Network] 📦 Payload: %s\n", jsonStr.c_str());
+                    }
                     cmdCount++;
                 }
             }
+        } else {
+            Serial.printf("[Network] ❌ JSON parse error: %s\n", error.c_str());
         }
         http.end();
         return true;
     } else {
-        Serial.printf("[Network] ❌ Ошибка получения pending команд. HTTP: %d\\n", httpCode);
+        Serial.printf("[Network] ❌ Ошибка получения pending команд. HTTP: %d\n", httpCode);
         http.end();
         return false;
+    }
+}
+
+void Network::processPendingCommands() {
+    while (hasPendingCommands()) {
+        ServerCommand cmd = getNextCommand();
+        Serial.printf("[Network] 🔄 Processing command ID: %d, Type: '%s'\n", cmd.id, cmd.type.c_str());
+
+        if (cmd.type == "SET_SCHEDULE") {
+            Serial.println("[Network] 📋 Applying SET_SCHEDULE...");
+            
+            JsonDocument doc;
+            DeserializationError error = deserializeJson(doc, cmd.payloadString);
+            
+            if (!error) {
+                int devId = doc["deviceId"] | 0;
+                JsonArray slots = doc["slots"];
+                
+                // 🛑 FIX: в ArduinoJson v7 у JsonArray нет метода .is<>()
+                // Проверяем размер массива вместо этого
+                if (devId >= 0 && devId < DEVICE_COUNT && slots.size() > 0) {
+                    // Применяем новые настройки расписания
+                    for (size_t i = 0; i < slots.size() && i < SCHEDULE_SLOTS_PER_DEVICE; i++) {
+                        JsonObject slot = slots[i];
+                        control.settings.schedule[devId].slots[i].enabled = slot["enabled"] | false;
+                        control.settings.schedule[devId].slots[i].startH  = slot["startH"] | 0;
+                        control.settings.schedule[devId].slots[i].startM  = slot["startM"] | 0;
+                        control.settings.schedule[devId].slots[i].endH    = slot["endH"] | 0;
+                        control.settings.schedule[devId].slots[i].endM    = slot["endM"] | 0;
+                    }
+                    
+                    // Сохраняем в NVS
+                    storage.saveSettings(control.settings);
+                    Serial.println("[Network] ✅ Schedule applied and saved to NVS");
+                    
+                    // Отправляем подтверждение на сервер
+                    acknowledgeCommand(cmd.id, true, "Schedule updated successfully");
+                    
+                } else {
+                    Serial.printf("[Network] ❌ Invalid schedule payload: devId=%d, slotsSize=%d\n", 
+                                  devId, slots.size());
+                    acknowledgeCommand(cmd.id, false, "Invalid payload structure");
+                }
+            } else {
+                Serial.printf("[Network] ❌ JSON parse error: %s\n", error.c_str());
+                acknowledgeCommand(cmd.id, false, "JSON parse error");
+            }
+        } 
+        else {
+            Serial.printf("[Network] ⚠️ Unknown command type: '%s' (acknowledging to remove from queue)\n", 
+                          cmd.type.c_str());
+            // Подтверждаем неизвестные команды, чтобы убрать их из очереди сервера
+            acknowledgeCommand(cmd.id, false, "Unknown command type");
+        }
     }
 }
 
@@ -276,8 +373,9 @@ ServerCommand Network::getNextCommand() {
 
 void Network::acknowledgeCommand(uint32_t id, bool success, const char* message) {
     HTTPClient http;
-    String url = String("http://") + SERVER_HOST + ":" + SERVER_PORT + "/api/device/command/" + id + "/executed";
-    Serial.printf("[Network] 📤 Подтверждение команды %d: %s\\n", id, url.c_str());
+    // 🛑 FIX: Убедись, что этот URL точно совпадает с роутом в твоем backend (device.js или commands.js)
+    String url = String("http://") + SERVER_HOST + ":" + SERVER_PORT + "/api/commands/" + id + "/executed";
+    Serial.printf("[Network] 📤 Подтверждение команды %d: %s\n", id, url.c_str());
 
     http.begin(url);
     http.addHeader("Content-Type", "application/json");
@@ -292,12 +390,11 @@ void Network::acknowledgeCommand(uint32_t id, bool success, const char* message)
     serializeJson(doc, payload);
 
     int httpCode = http.POST(payload);
-    if (httpCode == HTTP_CODE_OK) {
-
-
-        Serial.printf("[Network] ✅ Команда %d успешно подтверждена.\\n", id);
+    if (httpCode == HTTP_CODE_OK || httpCode == 200) {
+        Serial.printf("[Network] ✅ Команда %d успешно подтверждена сервером.\n", id);
     } else {
-        Serial.printf("[Network] ❌ Ошибка подтверждения команды %d. HTTP: %d\\n", id, httpCode);
+        Serial.printf("[Network] ❌ Ошибка подтверждения команды %d. HTTP: %d, Error: %s\n", 
+                      id, httpCode, http.errorToString(httpCode).c_str());
     }
     http.end();
 }

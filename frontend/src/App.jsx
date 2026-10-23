@@ -9,6 +9,8 @@ import Layout from './components/Layout';
 import { auth } from './api';
 import ParameterDetail from './pages/ParameterDetail';
 import CompareParameters from './pages/CompareParameters';
+//import { useEffect } from 'react';
+import { initWebSocket, disconnectWebSocket } from './websocket';
 
 function App() {
   const [user, setUser] = useState(null);

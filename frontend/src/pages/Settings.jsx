@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../api';
 import './Settings.css';
 import { canEditSettings } from '../utils/permissions';
+import ScheduleSection from './ScheduleSection';
 
 function Settings() {
   const [settings, setSettings] = useState([]);
@@ -175,6 +176,8 @@ function Settings() {
           {message.text}
         </div>
       )}
+
+      <ScheduleSection deviceOnline={deviceOnline} showMessage={showMessage}/>
 
       <div className="settings-groups">
         {groups.map((group, groupIndex) => (

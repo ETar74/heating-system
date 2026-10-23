@@ -97,7 +97,7 @@ module.exports = function createOtaRoutes({ prisma, broadcast, uploadDir, upload
         },
       });
 
-      broadcast({ type: 'ota_approved', version: firmware.version });
+      broadcastToUsers({ type: 'ota_approved', version: firmware.version });
       res.json({ success: true, message: 'Прошивка одобрена и отправлена на устройство' });
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -154,4 +154,31 @@ module.exports = function createOtaRoutes({ prisma, broadcast, uploadDir, upload
   });
 
   return router;
+  // 9. Check OTA update (if approved firmware exists)
+  router.get('/check', authenticateDevice, async (req, res) => {
+    try {
+      const approvedFirmware = await prisma.firmware.findFirst({
+        where: { approved: true },
+        orderBy: { uploadedAt: 'desc' },
+      });
+
+      if (!approvedFirmware) {
+        return res.json({ ota_available: false });
+      }
+
+      const otaToken = process.env.ESP32_TOKEN
+        ? `?token=${encodeURIComponent(process.env.ESP32_TOKEN)}`
+        : '';
+
+      res.json({
+        ota_available: true,
+        ota_version: approvedFirmware.version,
+        ota_url: `http://${req.headers.host}/api/ota/download/${approvedFirmware.id}${otaToken}`,
+        ota_size: approvedFirmware.filesize,
+        ota_md5: approvedFirmware.md5,
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 };
