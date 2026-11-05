@@ -164,36 +164,6 @@ const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 app.use('/api/ota', createOtaRoutes({ prisma, uploadDir, upload, authenticateDevice }));
 
 // ================= Алерты и очистка =================
-// const sendNotification = createNotifier({ prisma, bot });
-// const alarmEngine = new AlarmEngine({ prisma, notify: sendNotification });
-// setInterval(() => alarmEngine.check().catch(err => console.error('Alarm check error:', err.message)), 60 * 1000);
-
-// const RETENTION_DAYS = parseInt(process.env.TELEMETRY_RETENTION_DAYS, 10) || 30;
-// setInterval(async () => {
-//   try {
-//     const since = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
-//     const result = await prisma.telemetry.deleteMany({ where: { timestamp: { lt: since } } });
-//     if (result.count > 0) console.log(`🧹 Очистка телеметрии: удалено ${result.count} записей`);
-//   } catch (err) { console.error('Telemetry cleanup error:', err.message); }
-// }, 24 * 60 * 60 * 1000);
-
-// app.use((err, req, res, next) => {
-//   if (err instanceof multer.MulterError) {
-//     if (err.code === 'FILE_TOO_LARGE') return res.status(413).json({ error: 'Файл слишком большой (макс 5 МБ)' });
-//     return res.status(400).json({ error: `Ошибка загрузки: ${err.message}` });
-//   }
-//   console.error('Unhandled error:', err);
-//   if (!res.headersSent) res.status(500).json({ error: err.message });
-// });
-
-// const PORT = process.env.PORT || 3000;
-// // '0.0.0.0' означает "слушать запросы отовсюду, а не только с этого компьютера"
-// server.listen(PORT, '0.0.0.0', async () => {
-//   console.log(`🚀 Server + WebSocket running on port ${PORT} (доступен в локальной сети)`);
-//   await initializeDatabase(prisma);
-// });
-//app.use('/api/ota', createOtaRoutes({ prisma, uploadDir, upload, authenticateDevice }));
-// ================= Алерты и очистка =================
 const sendNotification = createNotifier({ prisma, bot });
 const alarmEngine = new AlarmEngine({ prisma, notify: sendNotification });
 setInterval(() => alarmEngine.check().catch(err => console.error('Alarm check error:', err.message)), 60 * 1000);

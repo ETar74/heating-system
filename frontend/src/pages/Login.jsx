@@ -12,13 +12,19 @@ function Login({ onLogin }) {
     e.preventDefault();
     setError('');
     setLoading(true);
+    
+    console.log('Логин отправляется:', { username, password });
 
     try {
+      console.log('Начинаем вызов auth.login...');
       const response = await auth.login(username, password);
+      console.log('auth.login выполнен успешно:', response);
       onLogin(response.data.user, response.data.token);
     } catch (error) {
+      console.error('Ошибка авторизации:', error);
       setError(error.response?.data?.error || 'Ошибка входа');
     } finally {
+      console.log('Окончание обработки авторизации');
       setLoading(false);
     }
   };

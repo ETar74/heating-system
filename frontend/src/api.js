@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Базовый URL API (без хвостового /api и /)
-const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/+$/, '');
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://80-66-89-208.nip.io:3000').replace(/\/+$/, '');
 
 const API_URL = `${API_BASE}/api`;
 

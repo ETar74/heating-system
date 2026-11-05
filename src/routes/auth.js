@@ -12,43 +12,68 @@ module.exports = function createAuthRoutes({ prisma }) {
 
   // Rate limit защищает от брут-форса
   router.post('/login', rateLimit({ windowMs: 15 * 60 * 1000, max: 15 }), async (req, res) => {
+    console.log('[AUTH] Получен POST /auth/login');
+    
     try {
       const { username, password } = req.body || {};
+      console.log('[AUTH] Обрабатываем данные:', { username, password });
 
+      // Проверка данных
       if (!username || !password) {
+        console.log('[AUTH] Неверные данные запроса');
         return res.status(400).json({ error: 'Укажите логин и пароль' });
       }
 
+      // Поиск пользователя
+      console.log('[AUTH] Поиск пользователя:', username);
       const user = await prisma.user.findUnique({
         where: { username },
         include: { role: true },
       });
+      console.log('[AUTH] Результат поиска:', !!user);
 
       if (!user) {
+        console.log('[AUTH] Пользователь не найден');
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
+      // Проверка пароля
+      console.log('[AUTH] Проверка пароля');
       const validPassword = await bcrypt.compare(password, user.passwordHash);
+      console.log('[AUTH] Пароль верен:', validPassword);
+      
       if (!validPassword) {
+        console.log('[AUTH] Неверный пароль');
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
+      // Генерация токена
+      console.log('[AUTH] Генерация токена');
       const token = jwt.sign(
         { id: user.id, username: user.username, role: user.role.name },
         process.env.JWT_SECRET,
         { expiresIn: '24h' }
       );
+      console.log('[AUTH] Токен сгенерирован');
 
+      // Создание записи о событии
+      console.log('[AUTH] Создание события');
       await prisma.event.create({
         data: {
           eventType: 'INFO',
           message: `Пользователь ${username} вошёл в систему`,
         },
       });
+      console.log('[AUTH] Событие создано');
 
+      // Отправка ответа
+      console.log('[AUTH] Отправляем ответ');
       res.json({ token, user: { id: user.id, username: user.username, role: user.role.name } });
+      console.log('[AUTH] Ответ отправлен');
+      
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      console.error('[AUTH] Ошибка при авторизации:', error);
+      res.status(500).json({ error: error.message || 'Ошибка сервера' });
     }
   });
 
