@@ -31,7 +31,7 @@
 #define PIN_PHASE_SENSOR   34
 #define NEXTION_RX         16
 #define NEXTION_TX         17
-#define NEXTION_BAUD       9600
+#define NEXTION_BAUD       115200
 
 // ===== Таймеры (мс) =====
 #define SENSOR_READ_INTERVAL     5000
