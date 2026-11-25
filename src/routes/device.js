@@ -3,6 +3,7 @@
 
 const express = require('express');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const { serialize, deserialize } = require('../lib/json');
 
 module.exports = function createDeviceRoutes({ prisma, broadcast, authenticateDevice, isDeviceOnline }) {
   const router = express.Router();
@@ -34,7 +35,7 @@ module.exports = function createDeviceRoutes({ prisma, broadcast, authenticateDe
         name: device.name,
         online: isOnline,
         lastSeen: device.lastSeen,
-        deviceStatus: cache?.deviceStatus || {},
+        deviceStatus: deserialize(cache?.deviceStatus) || {},
         uptime: cache?.uptime,
         firmware: cache?.firmware || device.firmwareVersion,
         lastSync: cache?.lastSync,
@@ -103,20 +104,20 @@ module.exports = function createDeviceRoutes({ prisma, broadcast, authenticateDe
       const cache = await prisma.deviceCache.upsert({
         where: { deviceId: deviceId || 'ESP32-001' },
         update: {
-          settings: settings || undefined,
-          telemetry: telemetry || undefined,
-          deviceStatus: device_status || undefined,
-          phases: phases || undefined,
+          settings: serialize(settings || undefined),
+          telemetry: serialize(telemetry || undefined),
+          deviceStatus: serialize(device_status || undefined),
+          phases: serialize(phases || undefined),
           lastSync: new Date(),
           uptime,
           firmware,
         },
         create: {
           deviceId: deviceId || 'ESP32-001',
-          settings: settings || {},
-          telemetry: telemetry || {},
-          deviceStatus: device_status || {},
-          phases: phases || {},
+          settings: serialize(settings || {}),
+          telemetry: serialize(telemetry || {}),
+          deviceStatus: serialize(device_status || {}),
+          phases: serialize(phases || {}),
           lastSync: new Date(),
           uptime,
           firmware,
@@ -256,7 +257,7 @@ module.exports = function createDeviceRoutes({ prisma, broadcast, authenticateDe
         commands: commands.map((cmd) => ({
           id: cmd.id,
           type: cmd.command,
-          payload: cmd.payload,
+          payload: deserialize(cmd.payload),
           createdAt: cmd.createdAt.getTime(),
         })),
         ota: otaInfo,
@@ -333,7 +334,7 @@ module.exports = function createDeviceRoutes({ prisma, broadcast, authenticateDe
         orderBy: { createdAt: 'desc' },
       });
 
-      const scheduleData = cache && cache.settings ? cache.settings.schedule : null;
+      const scheduleData = cache && cache.settings ? deserialize(cache.settings).schedule : null;
 
       if (scheduleData) {
         const formatted = [];
@@ -357,14 +358,14 @@ module.exports = function createDeviceRoutes({ prisma, broadcast, authenticateDe
           schedule: formatted,
           lastSync: cache.lastSync,
           online,
-          pendingUpdate: pendingCmd ? pendingCmd.payload : null,
+          pendingUpdate: pendingCmd ? deserialize(pendingCmd.payload) : null,
         });
       } else {
         res.json({
           schedule: [],
           lastSync: cache ? cache.lastSync : null,
           online,
-          pendingUpdate: pendingCmd ? pendingCmd.payload : null,
+          pendingUpdate: pendingCmd ? deserialize(pendingCmd.payload) : null,
           message: 'No data - requesting schedule from ESP32',
         });
       }
@@ -405,7 +406,7 @@ module.exports = function createDeviceRoutes({ prisma, broadcast, authenticateDe
         data: {
           deviceId: device.id,
           command: 'GET_SCHEDULE',
-          payload: {},
+          payload: serialize({}),
           status: 'pending',
         },
       });
@@ -484,7 +485,7 @@ module.exports = function createDeviceRoutes({ prisma, broadcast, authenticateDe
         data: {
           deviceId: device.id,
           command: 'SET_SCHEDULE',
-          payload: { deviceId, slots: cleanSlots },
+          payload: serialize({ deviceId, slots: cleanSlots }),
           status: 'pending',
         },
       });

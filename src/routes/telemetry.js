@@ -3,6 +3,7 @@
 
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
+const { deserialize } = require('../lib/json');
 
 module.exports = function createTelemetryRoutes({ prisma }) {
   const router = express.Router();
@@ -19,12 +20,13 @@ module.exports = function createTelemetryRoutes({ prisma }) {
       });
 
       if (cache && cache.telemetry) {
+        const telemetryObj = deserialize(cache.telemetry);
         const latest = {};
-        for (const [parameter, value] of Object.entries(cache.telemetry)) {
+        for (const [parameter, value] of Object.entries(telemetryObj)) {
           latest[parameter] = { value, timestamp: cache.lastSync };
         }
         if (cache.phases) {
-          latest.phases = { value: cache.phases, timestamp: cache.lastSync };
+          latest.phases = { value: deserialize(cache.phases), timestamp: cache.lastSync };
         }
         return res.json(latest);
       }

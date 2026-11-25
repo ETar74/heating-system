@@ -1,30 +1,7 @@
 #version: '3.8'
 
 services:
-  # База данных PostgreSQL
-  postgres:
-    image: postgres:16-alpine
-    container_name: heating_postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: postgres
-      # Из .env: POSTGRES_PASSWORD (дефолт "postgres"). Сильный пароль
-      # (openssl rand -base64 24) задаётся ДО первого создания тома.
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: heating_system
-    ports:
-      - "5433:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - heating_network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Backend (Node.js + Express)
+  # Backend (Node.js + Express + SQLite)
   backend:
     build:
       context: .
@@ -34,18 +11,15 @@ services:
     # JWT_SECRET, ESP32_TOKEN, CORS_ORIGINS и т.д. — из .env (см. README)
     env_file: .env
     environment:
-      # Внутри docker host — не localhost, а сервис postgres.
-      # POSTGRES_PASSWORD — то же значение, что у сервиса postgres (из .env).
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/heating_system?schema=public
+      # SQLite: файл БД хранится в persistent volume (не теряется при пересоздании)
+      DATABASE_URL: file:/app/data/heating.db
       PORT: 3000
     ports:
       - "3000:3000"
-    depends_on:
-      postgres:
-        condition: service_healthy
     volumes:
       - .:/app
       - /app/node_modules
+      - sqlite_data:/app/data
     networks:
       - heating_network
     healthcheck:
@@ -78,7 +52,7 @@ services:
       - backend
 
 volumes:
-  postgres_data:
+  sqlite_data:
 
 networks:
   heating_network:

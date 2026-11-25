@@ -4,6 +4,7 @@
 const express = require('express');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const { ALLOWED_COMMANDS } = require('../lib/constants');
+const { serialize, deserialize } = require('../lib/json');
 
 module.exports = function createCommandsRoutes({ prisma, broadcast, authenticateDevice }) {
   const router = express.Router();
@@ -30,7 +31,7 @@ module.exports = function createCommandsRoutes({ prisma, broadcast, authenticate
           data: {
             deviceId: device.id,
             command,
-            payload: payload || {},
+            payload: serialize(payload || {}),
           },
         });
 
@@ -42,8 +43,8 @@ module.exports = function createCommandsRoutes({ prisma, broadcast, authenticate
           },
         });
 
-        broadcastToUsers({ type: 'command_queued', command: cmd });
-        res.json(cmd);
+        broadcastToUsers({ type: 'command_queued', command: { ...cmd, payload: deserialize(cmd.payload) } });
+        res.json({ ...cmd, payload: deserialize(cmd.payload) });
       } catch (error) {
         res.status(500).json({ error: error.message });
       }
@@ -62,7 +63,7 @@ module.exports = function createCommandsRoutes({ prisma, broadcast, authenticate
         commands.map((cmd) => ({
           id: cmd.id,
           type: cmd.command,
-          payload: cmd.payload,
+          payload: deserialize(cmd.payload),
           createdAt: cmd.createdAt.getTime(),
         }))
       );

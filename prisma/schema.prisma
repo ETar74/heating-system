@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -86,7 +86,7 @@ model Command {
   id         Int       @id @default(autoincrement())
   deviceId   Int       @map("device_id")
   command    String
-  payload    Json?
+  payload    String?
   status     String    @default("pending")
   createdAt  DateTime  @default(now()) @map("created_at")
   executedAt DateTime? @map("executed_at")
@@ -99,10 +99,10 @@ model Command {
 model DeviceCache {
   id           Int      @id @default(autoincrement())
   deviceId     String   @unique @map("device_id")
-  settings     Json?
-  telemetry    Json?
-  deviceStatus Json?    @map("device_status")
-  phases       Json?
+  settings     String?
+  telemetry    String?
+  deviceStatus String?  @map("device_status")
+  phases       String?
   lastSync     DateTime @default(now()) @map("last_sync")
   uptime       Int?
   firmware     String?

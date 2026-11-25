@@ -27,6 +27,7 @@ const createDeviceRoutes = require('./src/routes/device');
 const createOtaRoutes = require('./src/routes/ota');
 
 const prisma = new PrismaClient();
+
 const { isDeviceOnline, requireDeviceOnline } = createOnlineChecker(prisma);
 
 // ================= WebSocket Настройка =================

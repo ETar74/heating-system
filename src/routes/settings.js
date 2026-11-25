@@ -4,6 +4,7 @@
 const express = require('express');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const { validateSetting } = require('../lib/settingsSchema');
+const { serialize, deserialize } = require('../lib/json');
 
 module.exports = function createSettingsRoutes({ prisma, broadcast, isDeviceOnline, requireDeviceOnline }) {
   const router = express.Router();
@@ -44,8 +45,8 @@ module.exports = function createSettingsRoutes({ prisma, broadcast, isDeviceOnli
         orderBy: { lastSync: 'desc' },
       });
 
-      if (cache && cache.settings && Object.keys(cache.settings).length > 0) {
-        const settings = Object.entries(cache.settings).map(([key, value]) => ({
+      if (cache && cache.settings && Object.keys(deserialize(cache.settings)).length > 0) {
+        const settings = Object.entries(deserialize(cache.settings)).map(([key, value]) => ({
           key,
           value: String(value),
           updatedAt: cache.lastSync,
@@ -104,7 +105,7 @@ module.exports = function createSettingsRoutes({ prisma, broadcast, isDeviceOnli
           data: {
             deviceId: device.id,
             command: 'SET_SETTING',
-            payload: { key, value: safeValue },
+            payload: serialize({ key, value: safeValue }),
             status: 'pending',
           },
         });
@@ -112,13 +113,13 @@ module.exports = function createSettingsRoutes({ prisma, broadcast, isDeviceOnli
         // Оптимистичное обновление кэша (UI сразу покажет новое значение)
         const cache = await prisma.deviceCache.findFirst({ orderBy: { lastSync: 'desc' } });
         let oldStringValue = null;
-        if (cache && cache.settings && key in cache.settings) {
-          oldStringValue = String(cache.settings[key]);
-          const settings = { ...cache.settings };
-          settings[key] = safeValue;
+        if (cache && cache.settings && key in deserialize(cache.settings)) {
+          const settingsObj = deserialize(cache.settings);
+          oldStringValue = String(settingsObj[key]);
+          settingsObj[key] = safeValue;
           await prisma.deviceCache.update({
             where: { id: cache.id },
-            data: { settings },
+            data: { settings: serialize(settingsObj) },
           });
         }
 
@@ -174,7 +175,7 @@ module.exports = function createSettingsRoutes({ prisma, broadcast, isDeviceOnli
         }
 
         const cache = await prisma.deviceCache.findFirst({ orderBy: { lastSync: 'desc' } });
-        const cacheSettings = cache && cache.settings ? { ...cache.settings } : null;
+        const cacheSettings = cache && cache.settings ? deserialize(cache.settings) : null;
 
         for (const param of parameters) {
           if (!param || !param.key || param.value === undefined) continue;
@@ -184,7 +185,7 @@ module.exports = function createSettingsRoutes({ prisma, broadcast, isDeviceOnli
             data: {
               deviceId: device.id,
               command: 'SET_SETTING',
-              payload: { key: param.key, value: safeValue },
+              payload: serialize({ key: param.key, value: safeValue }),
               status: 'pending',
             },
           });
@@ -209,7 +210,7 @@ module.exports = function createSettingsRoutes({ prisma, broadcast, isDeviceOnli
         if (cache && cacheSettings) {
           await prisma.deviceCache.update({
             where: { id: cache.id },
-            data: { settings: cacheSettings },
+            data: { settings: serialize(cacheSettings) },
           });
         }
 
