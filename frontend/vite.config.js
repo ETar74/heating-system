@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     port: 5173,
     host: '0.0.0.0',
-    allowedHosts: ['80-66-89-208.nip.io', 'localhost', '127.0.0.1'], // <-- ДОБАВЬ ЭТУ СТРОКУ
+    allowedHosts: ['80-66-89-208.nip.io', 'localhost', '127.0.0.1'],
     proxy: {
       '/api': {
         target: 'http://backend:3000',
